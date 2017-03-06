@@ -97,8 +97,9 @@ class Wp_Es_Feeder_Admin
          * between the defined hooks and the functions defined in this
          * class.
          */
-
         wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder-admin.js', array( 'jquery' ), $this->version, false );
+
+
     }
 
     // Register the administration menu
@@ -109,22 +110,40 @@ class Wp_Es_Feeder_Admin
 			* NOTE:  Alternative menu locations are available via WordPress administration menu functions.
 			* Administration Menus: http://codex.wordpress.org/Administration_Menus
 			*/
-        add_options_page( 'WP Elasticsearch Feeder Setup', 'WP ES Feeder', 'manage_options', $this->plugin_name, array($this, 'display_plugin_setup_page'));
+        add_options_page( 'WP Elasticsearch Feeder Settings', 'WP ES Feeder', 'manage_options', $this->plugin_name, array($this, 'display_plugin_setup_page'));
     }
 
     // Add settings action link to the plugins page.$_COOKIE
-    public function add_action_links($link)
+    public function add_action_links($links)
     {
         /*
 				*  Documentation : https://codex.wordpress.org/Plugin_API/Filter_Reference/plugin_action_links_(plugin_file_name)
 				*/
-        $settings_link = array('<a href="' . admin_url( 'options-general.php?page=' . $this->plugin_name ) . '">' . __('Settings', $this->plugin_name) . '</a>',);
-        return array_merge(  $settings_link, $links );
+        $mylinks = array('<a href="' . admin_url( 'options-general.php?page=myplugin' ) . '">Settings</a>',);
+        return array_merge( $links, $mylinks );
     }
 
 		// Render the settings page for this plugin.
     public function display_plugin_setup_page()
     {
         include_once( 'partials/wp-es-feeder-admin-display.php' );
+    }
+
+    public function validate($input)
+    {
+        $valid = array();
+
+        // validate
+        $valid['es_url'] = sanitize_text_field($input['es_url']);
+        $valid['es_index'] = sanitize_text_field($input['es_index']);
+        $valid['es_auth_required'] = (isset($input['es_auth_required']) && !empty($input['es_auth_required'])) ? 1: 0;
+        $valid['es_username'] = sanitize_text_field($input['es_username']);
+        $valid['es_password'] = sanitize_text_field($input['es_password']);
+
+        return $valid;
+    }
+
+    public function options_update() {
+        register_setting($this->plugin_name, $this->plugin_name, array($this, 'validate'));
     }
 }

@@ -1,4 +1,13 @@
-/**
- * All of the CSS for your admin-specific functionality should be
- * included in this file.
- */
+ .spinner-animation {
+   float:none;
+   width:auto;
+   height:auto;
+   padding: 5px 0 5px 30px;
+   background-position: 0;
+ }
+ .index-spinner {
+   height: 28px;
+   display: block;
+   opacity: .7;
+   position: relative;
+ }
