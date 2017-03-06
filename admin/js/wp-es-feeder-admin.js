@@ -101,8 +101,16 @@
 	function processRecords() {
 		$('.index-spinner').html(renderCounter());
 
-		getPosts().then(function (isProcessing) {
-			if (!isProcessing) {
+		var postTypePromises = [];
+		settings.postTypes.forEach(function (type) {
+			postTypePromises.push(getPostTypeList(type));
+		})
+
+		Promise.all(postTypePromises).then(function (isProcessing) {
+			var isAllComplete = isProcessing.every(function (processing) {
+				return processing === false;
+			});
+			if (isAllComplete) {
 				var timer = setTimeout(function () {
 					getCount();
 					clearTimeout(timer);
@@ -118,13 +126,12 @@
 			});
 	}
 
-	function getPosts(page) {
-		if (!page) {
-			page = 1;
-		}
+	function getPostTypeList(type, page) {
+		if (!page) { page = 1; }
+		if (!type) { throw new Error('getPostTypeList(): no post-type parameter supplied'); }
 		var origin = document.location.origin;
 
-		return request(origin + '/wp-json/wp/v2/posts?per_page=25&page=' + page)
+		return request(origin + '/wp-json/wp/v2/' + typeUtility(type) + '?per_page=25&page=' + page)
 			.then(function (data) {
 				if (!(data instanceof Array)) {
 					return true;
@@ -133,8 +140,8 @@
 					return true;
 				}
 
-				data.forEach(function(record) {
-					indexRecord(record);
+				data.forEach(function (record) {
+					indexRecord(record, type);
 				});
 
 				page++;
@@ -143,12 +150,19 @@
 				if (isEmpty) {
 					return false;
 				}
-				return getPosts(page);
+				return getPostTypeList(type, page);
 			});
 	}
 
-	function indexRecord(payload) {
-		return request(settings.server + settings.index + '/post', {
+	function typeUtility (type) {
+		if (type === 'courses' || type === 'instructors' || type === 'lessons'|| type === 'media') {
+			return type;
+		}
+		return type + 's';
+	}
+
+	function indexRecord(payload, type) {
+		return request(settings.server + settings.index + '/' + type, {
 			method: 'POST',
 			body: JSON.stringify(payload)
 		});
@@ -160,9 +174,9 @@
 		}).then(function (data) {
 			$('.index-spinner')
 				.html('<span style="top: 10px; position: absolute;">Indexed ' + data.count + ' records.</span>');
-				jsonDisplay(
-					JSON.stringify(data, null, 2)
-				);
+			jsonDisplay(
+				JSON.stringify(data, null, 2)
+			);
 		});
 	}
 
@@ -243,6 +257,17 @@
 		return true;
 	}
 
+	function getSelectedPostTypes() {
+		var types = [];
+		$('[id^="es_post_type_"]').each(function (index, element) {
+			if (element.checked) {
+				var tmpArray = element.id.split('_');
+				types.push(tmpArray[3]);
+			}
+		});
+		return types;
+	}
+
 	function getSettings() {
 		settings = {
 			server: $('#es_url').val(),
@@ -251,7 +276,8 @@
 				enabled: $('#es_auth_required').is(':checked'),
 				user: $('#es_username').val(),
 				password: $('#es_passowrd').val()
-			}
+			},
+			postTypes: getSelectedPostTypes()
 		};
 		return settings;
 	}

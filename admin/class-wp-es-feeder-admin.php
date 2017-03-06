@@ -140,6 +140,13 @@ class Wp_Es_Feeder_Admin
         $valid['es_username'] = sanitize_text_field($input['es_username']);
         $valid['es_password'] = sanitize_text_field($input['es_password']);
 
+        $post_types = get_post_types(array( 'public' => true ));
+        $types = new stdClass();
+        foreach($post_types as $key => $value) {
+             $types -> $value= (isset($input['es_post_type_'.$value]) && !empty($input['es_post_type_'.$value])) ? 1: 0;
+        }
+        $valid['es_post_types'] = $types;
+
         return $valid;
     }
 

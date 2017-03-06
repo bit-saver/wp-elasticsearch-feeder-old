@@ -21,7 +21,6 @@
     <form method="post" name="elasticsearch_options" action="options.php">
 
     <?php
-        //Grab all options
         $options = get_option($this->plugin_name);
 
 				if ($options) {
@@ -30,6 +29,8 @@
 					$es_auth_required = $options['es_auth_required'];
 					$es_username = $options['es_username'];
 					$es_password = $options['es_password'];
+					$es_post_types = $options['es_post_types'];
+					file_put_contents('/Users/maxorelus/Sites/site.log', print_r($es_post_types, TRUE));
 				}
     ?>
 
@@ -63,9 +64,9 @@
 
 						<div class="inside">
 							<fieldset>
-							<legend class="screen-reader-text"><span>Fieldset Example</span></legend>
-							<label for="users_can_register">
-								<input type="checkbox" id="es_auth_required" name="<?php echo $this->plugin_name; ?>[es_auth_required]" <?php checked($es_auth_required, 1); ?>/>
+							<legend class="screen-reader-text"><span>Authentication</span></legend>
+							<label for="es_auth_required">
+								<input type="checkbox" id="es_auth_required" name="<?php echo $this->plugin_name; ?>[es_auth_required]" <?php checked($es_auth_required -> $value, 1); ?>/>
 								<span><?php esc_attr_e( 'Authentication required', 'wp_admin_style' ); ?></span>
 							</label>
 						</fieldset>
@@ -78,6 +79,36 @@
 						<div class="inside">
 							<input type="password" placeholder="password" class="regular-text" id="es_passowrd" name="<?php echo $this->plugin_name; ?>[es_password]" value="<?php if(!empty($es_password)) echo $es_password; ?>"/>
 						</div>
+
+						<hr/>
+
+						<h2><span><?php esc_attr_e( 'Post Types', 'wp_admin_style' ); ?></span></h2>
+
+						<div class="inside">
+							<p>Select the post-types to index into Elasticsearch.</p>
+
+							<?php $post_types = get_post_types(array( 'public' => true ));
+
+							foreach($post_types as $key => $value) {
+								// whether the post type is active or not
+								$value_state = $es_post_types -> $value;
+								if ($value_state == 1) { $checked = 'checked="checked"'; }
+								else { $checked = '';}
+
+								// change attachment to media
+								if ($value == 'attachment') { $value = 'media'; }
+
+								// html structure
+								echo '<fieldset>
+												<legend class="screen-reader-text"><span>es_post_type_'.$value.'</span></legend>
+												<label for="es_post_type_'.$value.'">
+													<input type="checkbox" id="es_post_type_'.$value.'" name="'.$this->plugin_name.'[es_post_type_'.$value.']" '.$checked.'/>
+													<span>'.$value.'</span>
+												</label>
+											</fieldset>';
+							}?>
+						</div>
+
 
 						<hr/>
 
