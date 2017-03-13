@@ -1,31 +1,33 @@
 <?php
-
 // abort if not called via Wordpress
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined( 'ABSPATH' )) {
     exit;
 }
 
 if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
-    class ELASTICSEARCH_WP_REST_API_Controller extends WP_REST_Controller {
+    class ELASTICSEARCH_WP_REST_API_Controller extends WP_REST_Controller
+    {
 
-        public function __construct($post_type) {
+        public function __construct($post_type)
+        {
             $this -> namespace = 'elasticsearch/v1';
             $this -> resource_name = $post_type;
         }
 
-        public function register_routes() {
+        public function register_routes()
+        {
             register_rest_route($this -> namespace, '/' . $this -> resource_name, array(
             array(
             'methods' => WP_REST_Server::READABLE,
             'callback' => array($this, 'get_items'),
             'args' => array(
             'per_page' => array(
-            'validate_callback' => function($param, $request, $key) {
+            'validate_callback' => function ($param, $request, $key) {
                 return is_numeric($param);
             }
             ),
             'page' => array(
-            'validate_callback' => function($param, $request, $key) {
+            'validate_callback' => function ($param, $request, $key) {
                 return is_numeric($param);
             }
             )
@@ -40,7 +42,7 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             'callback'  => array( $this, 'get_item' ),
             'args' => array(
             'id' => array(
-            'validate_callback' => function($param, $request, $key) {
+            'validate_callback' => function ($param, $request, $key) {
                 return is_numeric($param);
             }
             )
@@ -50,45 +52,48 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             ));
         }
 
-        public function get_items($request) {
-            $data = array(); // response array
+        public function get_items($request)
+        {
+            $ref = array(
+                'posts' => 'post',
+                'pages' => 'page',
+                'media' => 'attachment'
+            );
+
             $page = (int) $request -> get_param('page');
             $per_page = (int) $request -> get_param('per_page');
 
-            if ($this -> resource_name == 'posts') {
-              if ($per_page) {
-                $args['posts_per_page'] = $per_page;
-              } else {
-                $args['posts_per_page'] = 25;
-              }
-            }
-            else if ($this -> resource_name == 'pages') {
-              if ($per_page) {
-                $args['number'] = $per_page;
-              }
-              else {
-                $args['number'] = 25;
-              }
-            }
-
-            if ($page) {
-              if ($page == 1) {
-                $args['offset'] = 0;
-              }
-              else if ($page > 1) {
-                $args['offset'] = ($page * $per_page) - $per_page;
-              }
+            if ($this -> resource_name == 'posts' || $this -> resource_name == 'pages') {
+                $args['post_type'] = $ref[$this -> resource_name];
+                if ($per_page) {
+                    $args['posts_per_page'] = $per_page;
+                } else {
+                    $args['posts_per_page'] = 25;
+                }
+            } elseif ($this -> resource_name == 'media') {
+                $args['post_type'] = $ref[$this -> resource_name];
+                if ($per_page) {
+                    $args['posts_per_page'] = $per_page;
+                } else {
+                    $args['posts_per_page'] = 25;
+                }
             }
 
-            // probably should refactor
-            $posts = $this -> resource_name === 'posts' ? get_posts( $args ) : get_pages( $args );
+            if (is_numeric($page)) {
+                if ($page == 1) {
+                    $args['offset'] = 0;
+                } elseif ($page > 1) {
+                    $args['offset'] = ($page * $args['posts_per_page']) - $args['posts_per_page'];
+                }
+            }
 
+            $posts = get_posts($args);
 
-            if ( empty( $posts ) ) {
+            if (empty( $posts )) {
                 return rest_ensure_response( $data );
             }
 
-            foreach ( $posts as $post ) {
+            foreach ($posts as $post) {
                 $response = $this->prepare_item_for_response( $post, $request );
                 $data[] = $this->prepare_response_for_collection( $response );
             }
@@ -97,13 +102,14 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             return rest_ensure_response( $data );
         }
 
-        public function get_item( $request ) {
+        public function get_item($request)
+        {
             $id = (int) $request['id'];
 
             // probably should refactor
-            $post = $this -> resource_name === 'posts' ? get_post( $id ) : get_page( $id );
+            $post = $this -> resource_name === 'pages' ? get_page( $id ) : get_post( $id );
 
-            if ( empty( $post ) ) {
+            if (empty( $post )) {
                 return rest_ensure_response( array() );
             }
 
@@ -112,44 +118,51 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             return $response;
         }
 
-        public function prepare_response_for_collection( $response ) {
-            if ( ! ( $response instanceof WP_REST_Response ) ) {
+        public function prepare_response_for_collection($response)
+        {
+            if (! ( $response instanceof WP_REST_Response )) {
                 return $response;
             }
 
             $data = (array) $response->get_data();
             $server = rest_get_server();
 
-            if ( method_exists( $server, 'get_compact_response_links' ) ) {
+            if (method_exists( $server, 'get_compact_response_links' )) {
                 $links = call_user_func( array( $server, 'get_compact_response_links' ), $response );
             } else {
                 $links = call_user_func( array( $server, 'get_response_links' ), $response );
             }
 
-            if ( ! empty( $links ) ) {
+            if (! empty( $links )) {
                 $data['_links'] = $links;
             }
 
             return $data;
         }
 
-        public function prepare_item_for_response( $post, $request ) {
-
+        public function prepare_item_for_response($post, $request)
+        {
             $post_data = array();
 
+            // if atachment return right away
+            if ($post->post_type == 'attachment') {
+                $post_data = wp_prepare_attachment_for_js( $post->ID );
+                return rest_ensure_response( $post_data );
+            }
+
             // We are also renaming the fields to more understandable names.
-            if ( isset( $post -> ID ) ) {
+            if (isset( $post -> ID )) {
                 $post_data['id'] = (int) $post -> ID;
             }
 
             $post_data['post_type'] = get_post_type($post -> ID);
 
             if (isset($post -> post_date)) {
-                $post_data['post_date'] = $post -> post_date;
+                $post_data['@timestamp'] = get_the_date('c', $post -> ID);
             }
 
             if (isset($post -> post_modified)) {
-                $post_data['post_modified'] = $post -> post_modified;
+                $post_data['post_modified'] = get_the_modified_date('c', $post -> ID);
             }
 
             if (isset( $post -> post_author)) {
@@ -167,18 +180,17 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
                 $post_data['title_slug'] = $post -> post_name;
             }
 
-            if ( isset( $post -> post_content ) ) {
+            if (isset( $post -> post_content )) {
                 $post_data['content'] = apply_filters( 'the_content', $post -> post_content, $post );
             }
 
-            if ( isset( $post -> post_excerpt ) ) {
+            if (isset( $post -> post_excerpt )) {
                 $post_data['excerpt'] = $post -> post_excerpt;
             }
 
             // pre-approved
-            $post_data['catogories'] = $this -> get_categories($post -> ID);
+            $post_data['categories'] = $this -> get_categories($post -> ID);
             $post_data['tags'] = $this -> get_tags($post -> ID);
-
             $post_data['language'] = $this -> get_language($post -> ID);
 
             $feature_image_exists = has_post_thumbnail($post -> ID);
@@ -193,15 +205,16 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             return rest_ensure_response( $post_data );
         }
 
-        protected function get_featured_image( $id ) {
+        protected function get_featured_image($id)
+        {
             $image = wp_prepare_attachment_for_js( $id );
             $sizes = $image['sizes'];
             $sizeArray = array();
             $srcArray = array();
-            if ( !empty($sizes) ) {
-                foreach( $sizes as $size ){
-                    if ( $size['width'] <= 770 ) {
-                        if ( empty($srcArray) || $srcArray['width'] < $size['width'] ) {
+            if (!empty($sizes)) {
+                foreach ($sizes as $size) {
+                    if ($size['width'] <= 770) {
+                        if (empty($srcArray) || $srcArray['width'] < $size['width']) {
                             $srcArray = array(
                             "width"=>$size['width'],
                             "height"=>$size['height'],
@@ -229,16 +242,11 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             return $data;
         }
 
-        protected function get_language($id) {
-            if (isset($sitepress)) {
-                $wpml_data = apply_filters( 'wpml_post_language_details', NULL, $id );
-                return array(
-                'language_code' => $wpml_data -> language_code,
-                'locale' => $wpml_data -> locale,
-                'text_direction' => ($wpml_data -> text_direction ? 'rtl' : 'ltr'),
-                'display_name' => $wpml_data -> display_name,
-                'native_name' => $wpml_data -> native_name
-                );
+        protected function get_language($id)
+        {
+            global $sitepress;
+            if ($sitepress) {
+                return apply_filters( 'wpml_post_language_details', null, $id );
             } else {
                 return array(
                 'locale' => get_bloginfo('language')
@@ -246,41 +254,45 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             }
         }
 
-        protected function get_categories( $id ) {
+        protected function get_categories($id)
+        {
             $categories = wp_get_post_categories( $id, array('fields' => 'all') );
-            $catArray = array();
-            if ( !empty($categories) ) {
-                foreach ( $categories as $category ) {
-                    $data = array(
-                    "id" => (int) $category -> term_id,
-                    "slug" => $category -> slug,
-                    "title" => $category -> name,
-                    "description" => $category -> description
-                    );
-                    $catArray[] = $data;
+            $catArray = array(
+                'id' => array(),
+                'slug' => array(),
+                'title' => array()
+            );
+
+            if (!empty($categories)) {
+                foreach ($categories as $category) {
+                    $catArray['id'][] = (int) $category -> term_id;
+                    $catArray['slug'][] = $category -> slug;
+                    $catArray['name'][] = $category -> name;
                 }
             }
             return $catArray;
         }
 
-        protected function get_tags( $id ) {
+        protected function get_tags($id)
+        {
             $tags = wp_get_post_tags( $id );
-            $tagArray = array();
-            if ( !empty($tags) ) {
-                foreach ( $tags as $tag ) {
-                    $data = array(
-                    "id"=>$tag->term_id,
-                    "slug"=>$tag->slug,
-                    "title"=>$tag->name,
-                    "description"=>$tag->description
-                    );
-                    $tagArray[] = $data;
+            $tagArray = array(
+                'id' => array(),
+                'slug' => array(),
+                'title' => array()
+            );
+            if (!empty($tags)) {
+                foreach ($tags as $tag) {
+                    $tagArray['id'][] = $tag -> term_id;
+                    $tagArray['slug'][] = $tag -> slug;
+                    $tagArray['name'][] = $tag -> name;
                 }
             }
             return $tagArray;
         }
 
-        protected function get_author( $id ) {
+        protected function get_author($id)
+        {
             $data = array(
             'id' => (int) $id,
             'name' => get_the_author_meta('nicename', $id)
@@ -288,36 +300,44 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             return $data;
         }
 
-        public function get_items_permissions_check( $request ) {
+        public function get_items_permissions_check($request)
+        {
             return true;
         }
 
-        public function get_item_permissions_check( $request ) {
+        public function get_item_permissions_check($request)
+        {
             return true;
         }
 
-        public function authorization_status_code() {
+        public function authorization_status_code()
+        {
             $status = 401;
-            if ( is_user_logged_in() ) {
+            if (is_user_logged_in()) {
                 $status = 403;
             }
             return $status;
         }
-
-        private function debugger($value) {
-            file_put_contents('/Users/maxorelus/Sites/site.log', print_r($value, TRUE));
-        }
     }
 }
 
-function prefix_register_my_rest_routes() {
-    // post
-    $post_controller = new ELASTICSEARCH_WP_REST_API_Controller('posts');
-    $post_controller -> register_routes();
+function prefix_register_my_rest_routes()
+{
+    $post_types = get_post_types(array('show_in_rest' => true));
+    $defaults = array(
+        'post' => 'posts',
+        'page' => 'pages',
+        'attachment' => 'media'
+    );
 
-    // page
-    $page_controller = new ELASTICSEARCH_WP_REST_API_Controller('pages');
-    $page_controller -> register_routes();
+    if (is_array($post_types) && count($post_types) > 0) {
+        foreach ($post_types as $type) {
+            if ($defaults[$type]) {
+                $controller = new ELASTICSEARCH_WP_REST_API_Controller($defaults[$type]);
+                $controller -> register_routes();
+            }
+        }
+    }
 }
 
 add_action( 'rest_api_init', 'prefix_register_my_rest_routes' );

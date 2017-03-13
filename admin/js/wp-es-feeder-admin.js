@@ -140,7 +140,7 @@
         var timer = setTimeout(function () {
           getCount();
           clearTimeout(timer);
-        }, 3000);
+        }, 5000);
       }
     })
       .catch(function (error) {
@@ -157,7 +157,7 @@
     if (!type) { throw new Error('getPostTypeList(): no post-type parameter supplied'); }
     var origin = document.location.origin;
 
-    return request(origin + '/wp-json/elasticsearch/v1/' + typeUtility(type) + '?per_page=25&page=' + page)
+    return request(origin + '/wp-json/elasticsearch/v1/' + typeUtility(type) + '?page=' + page)
       .then(function (data) {
         if (!(data instanceof Array)) {
           return true;
@@ -165,6 +165,7 @@
         else if (!data.length) {
           return true;
         }
+
 
         data.forEach(function (record) {
           indexRecord(record, type);
@@ -176,19 +177,20 @@
         if (isEmpty) {
           return false;
         }
+
         return getPostTypeList(type, page);
       });
   }
 
   function typeUtility(type) {
-    if (type === 'courses' || type === 'instructors' || type === 'lessons' || type === 'media') {
+    if (type === 'media') {
       return type;
     }
     return type + 's';
   }
 
-  function indexRecord(record, type) {
-    var opts = generatePostBody('POST', settings.server + '/' + settings.index + '/' + type, record);
+  function indexRecord(data, type) {
+    var opts = generatePostBody('POST', settings.server + '/' + settings.index + '/' + type, data);
 
     return request(ELASTIC_PROXY, opts);
   }
@@ -248,7 +250,7 @@
     var timer = setTimeout(function () {
       $('.notice').remove();
       clearTimeout(timer);
-    }, 3000);
+    }, 5000);
   }
 
   function isValidIndex() {
