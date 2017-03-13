@@ -155,9 +155,8 @@
   function getPostTypeList(type, page) {
     if (!page) { page = 1; }
     if (!type) { throw new Error('getPostTypeList(): no post-type parameter supplied'); }
-    var origin = document.location.origin;
 
-    return request(origin + '/wp-json/elasticsearch/v1/' + typeUtility(type) + '?page=' + page)
+    return request(settings.domain + '/wp-json/elasticsearch/v1/' + typeUtility(type) + '?page=' + page)
       .then(function (data) {
         if (!(data instanceof Array)) {
           return true;
@@ -295,6 +294,7 @@
 
   function getSettings() {
     settings = {
+      domain: $('#es_wp_domain').val(),
       server: $('#es_url').val(),
       index: $('#es_index').val(),
       postTypes: getSelectedPostTypes(),

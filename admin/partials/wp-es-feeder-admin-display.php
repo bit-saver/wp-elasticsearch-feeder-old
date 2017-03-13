@@ -22,6 +22,7 @@
 			$options = get_option($this->plugin_name);
 
 			if ($options) {
+				$es_wp_domain = $options['es_wp_domain'];
 				$es_url = $options['es_url'];
 				$es_index = $options['es_index'];
 				// $es_auth_required = $options['es_auth_required'];
@@ -41,10 +42,13 @@
 			<div id="post-body-content">
 				<div class="meta-box-sortables ui-sortable">
 					<div class="postbox">
+						<div class="inside" style="display: none;">
+							<input type="text" value="<?php echo site_url(); ?>" class="regular-text" id="es_wp_domain" name="<?php echo $this->plugin_name; ?>[es_wp_domain]" value="<?php if(!empty($es_wp_domain)) echo $es_wp_domain; ?>" disabled/>
+						</div>
 
 						<h2><span><?php esc_attr_e( 'Elasticsearch Server URL', 'wp_admin_style' ); ?></span></h2>
 						<div class="inside">
-							<input type="text" placeholder="http://localhost:9200/" class="large-text" id="es_url" name="<?php echo $this->plugin_name; ?>[es_url]" value="<?php if(!empty($es_url)) echo $es_url; ?>"/>
+							<input type="text" placeholder="http://localhost:9200/" class="regular-text" id="es_url" name="<?php echo $this->plugin_name; ?>[es_url]" value="<?php if(!empty($es_url)) echo $es_url; ?>"/>
 							<!--<span class="description"><?php esc_attr_e( 'It must include the trailing slash "/"', 'wp_admin_style' ); ?></span><br>-->
 						</div>
 
