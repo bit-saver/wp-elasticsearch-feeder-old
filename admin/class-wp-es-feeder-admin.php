@@ -45,7 +45,7 @@ class Wp_Es_Feeder_Admin {
         );
 
         $post_types = get_post_types(array('show_in_rest' => true));
-        $this -> debugger ($post_types);
+
         $types = array();
         foreach($post_types as $key => $value) {
             $types[$value] = (isset($input['es_post_type_'.$value]) && !empty($input['es_post_type_'.$value])) ? 1: 0;
@@ -61,6 +61,6 @@ class Wp_Es_Feeder_Admin {
     }
 
     private function debugger($value) {
-        file_put_contents('/Users/maxorelus/Sites/site.log', print_r($value, TRUE));
+        // file_put_contents('/Users/maxorelus/Sites/site.log', print_r($value, TRUE));
     }
 }

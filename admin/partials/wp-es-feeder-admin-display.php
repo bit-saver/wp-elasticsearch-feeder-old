@@ -29,8 +29,6 @@
 				$es_secret_key = $options['es_secret_key'];
 				$es_post_types = $options['es_post_types'];
 			}
-
-      // file_put_contents('/Users/maxorelus/Sites/site.log', print_r($options, TRUE));
     ?>
 
     <?php
@@ -57,7 +55,7 @@
 
 						<hr/>
 
-						<h2><span><?php esc_attr_e( 'AWS Authentication', 'wp_admin_style' ); ?></span></h2>
+						<h2><span><?php esc_attr_e( 'AWS Authentication (optional)', 'wp_admin_style' ); ?></span></h2>
 
 						<div class="inside">
 							<input type="text" placeholder="Access Key ID" class="regular-text" id="es_access_key" name="<?php echo $this->plugin_name; ?>[es_access_key]" value="<?php if(!empty($es_access_key)) echo $es_access_key; ?>"/>
