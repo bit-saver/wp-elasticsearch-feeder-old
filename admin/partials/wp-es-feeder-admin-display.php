@@ -22,7 +22,6 @@
 			$options = get_option($this->plugin_name);
 
 			if ($options) {
-				$es_wp_domain = $options['es_wp_domain'];
 				$es_url = $options['es_url'];
 				$es_index = $options['es_index'];
 				// $es_auth_required = $options['es_auth_required'];
@@ -43,7 +42,7 @@
 				<div class="meta-box-sortables ui-sortable">
 					<div class="postbox">
 						<div class="inside" style="display: none;">
-							<input type="text" value="<?php echo site_url(); ?>" class="regular-text" id="es_wp_domain" name="<?php echo $this->plugin_name; ?>[es_wp_domain]" value="<?php if(!empty($es_wp_domain)) echo $es_wp_domain; ?>" disabled/>
+							<input type="text" value="<?php echo site_url(); ?>" class="regular-text" id="es_wp_domain" name="<?php echo $this->plugin_name; ?>[es_wp_domain]" value="<?php echo $es_wp_domain; ?>" disabled/>
 						</div>
 
 						<h2><span><?php esc_attr_e( 'Elasticsearch Server URL', 'wp_admin_style' ); ?></span></h2>
