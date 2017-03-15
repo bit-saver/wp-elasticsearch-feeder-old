@@ -181,7 +181,7 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
             }
 
             if (isset( $post -> post_content )) {
-                $post_data['content'] = apply_filters( 'the_content', $post -> post_content, $post );
+                $post_data['content'] = $this -> render_vs_shortcodes( $post );
             }
 
             if (isset( $post -> post_excerpt )) {
@@ -317,6 +317,21 @@ if (!class_exists('ELASTICSEARCH_WP_REST_API_Controller')) {
                 $status = 403;
             }
             return $status;
+        }
+
+        function render_vs_shortcodes( $object )
+        {
+          if (!class_exists('WPBMap')) {
+            return apply_filters( 'the_content', $object->post_content );
+          }
+
+          WPBMap::addAllMappedShortcodes(); // This does all the work
+
+          global $post;
+          $post = get_post ($object -> ID);
+          $output = apply_filters( 'the_content', $post->post_content );
+
+          return $output;
         }
     }
 }
