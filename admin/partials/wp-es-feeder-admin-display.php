@@ -24,7 +24,6 @@
 			if ($options) {
 				$es_url = $options['es_url'];
 				$es_index = $options['es_index'];
-				// $es_auth_required = $options['es_auth_required'];
 				$es_access_key = $options['es_access_key'];
 				$es_secret_key = $options['es_secret_key'];
 				$es_post_types = $options['es_post_types'];
@@ -77,8 +76,13 @@
 							foreach($post_types as $key => $value) {
 								// whether the post type is active or not
 								$value_state = $es_post_types[$value];
-								if ($value_state == 1) { $checked = 'checked="checked"'; }
-								else { $checked = '';}
+
+								if ($value_state == 1) {
+                  $checked = 'checked="checked"';
+                }
+								else {
+                  $checked = '';
+                }
 
 								// change attachment to media
 								if ($value == 'attachment') { $value = 'media'; }
