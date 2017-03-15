@@ -58,8 +58,4 @@ class Wp_Es_Feeder_Admin {
     public function options_update() {
         register_setting($this->plugin_name, $this->plugin_name, array($this, 'validate'));
     }
-
-    private function debugger($value) {
-        // file_put_contents('/Users/maxorelus/Sites/site.log', print_r($value, TRUE));
-    }
 }
