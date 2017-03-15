@@ -38,7 +38,6 @@ class Wp_Es_Feeder_Admin {
         $valid = array(
         'es_url' => sanitize_text_field($input['es_url']),
         'es_index' => sanitize_text_field($input['es_index']),
-        // 'es_auth_required' => (isset($input['es_auth_required']) && !empty($input['es_auth_required'])) ? 1: 0,
         'es_access_key' => sanitize_text_field($input['es_access_key']),
         'es_secret_key' => sanitize_text_field($input['es_secret_key']),
         'es_wp_domain' => sanitize_text_field($input['es_wp_domain'])
