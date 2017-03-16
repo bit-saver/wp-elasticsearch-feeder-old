@@ -16,8 +16,8 @@
  */
 
 // abort if not called via Wordpress
-if (!defined( 'WPINC')) {
-	die;
+if ( !defined( 'WPINC' ) ) {
+  die;
 }
 
 // load elasticsearch REST api/elasticsearch feeder dependencies
@@ -26,4 +26,4 @@ require plugin_dir_path( __FILE__ ) . 'includes/class-wp-es-feeder.php';
 
 // run elasticsearch feeder plugin
 $feeder = new Wp_Es_Feeder();
-$feeder -> run();
+$feeder->run();
