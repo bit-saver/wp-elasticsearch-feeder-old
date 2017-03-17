@@ -147,6 +147,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       // if atachment return right away
       if ( $post->post_type == 'attachment' ) {
         $post_data = wp_prepare_attachment_for_js( $post->ID );
+        $post_data['site'] = $this -> index_name;
         return rest_ensure_response( $post_data );
       }
 
