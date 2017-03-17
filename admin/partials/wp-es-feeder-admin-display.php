@@ -8,8 +8,8 @@
  * @link       http://github.com/MaxOrelus
  * @since      1.0.0
  *
- * @package    Wp_Es_Feeder
- * @subpackage Wp_Es_Feeder/admin/partials
+ * @package    wp_es_feeder
+ * @subpackage wp_es_feeder/admin/partials
  */
 ?>
 
@@ -72,20 +72,16 @@
 						<h2><span><?php esc_attr_e( 'Post Types', 'wp_admin_style' ); ?></span></h2>
 						<div class="inside">
 							<p>Select the post-types to index into Elasticsearch.</p>
-							<?php $post_types = get_post_types(array( 'public' => true ));
+							<?php $post_types = get_post_types(array('show_in_rest' => true));
 							foreach($post_types as $key => $value) {
 								// whether the post type is active or not
 								$value_state = $es_post_types[$value];
 
 								if ($value_state == 1) {
                   $checked = 'checked="checked"';
-                }
-								else {
+                } else {
                   $checked = '';
                 }
-
-								// change attachment to media
-								if ($value == 'attachment') { $value = 'media'; }
 
 								// html structure
 								echo '<fieldset>

@@ -1,6 +1,6 @@
 <?php
 
-class Wp_Es_Feeder_Loader {
+class wp_es_feeder_Loader {
 
   protected $actions;
   protected $filters;
@@ -31,7 +31,6 @@ class Wp_Es_Feeder_Loader {
     );
 
     return $hooks;
-
   }
 
   public function run() {

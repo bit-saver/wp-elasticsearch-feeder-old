@@ -7,13 +7,13 @@ if ( !defined( 'ABSPATH' ) ) {
 if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
   class ELASTICSEARCH_WP_REST_API_Controller extends WP_REST_Controller {
     public function __construct( $post_type ) {
-      $this->namespace     = 'elasticsearch/v1';
-      $this->resource_name = $this->get_labels( $post_type )->name;
-      $this->type          = $post_type;
+      $this->namespace = 'elasticsearch/v1';
+      $this->resource = ES_API_HELPER::get_post_type_label($post_type, 'name');
+      $this->type = $post_type;
     }
 
     public function register_routes() {
-      register_rest_route( $this->namespace, '/' . $this->resource_name, array(
+      register_rest_route( $this->namespace, '/' . $this->resource, array(
          array(
            'methods' => WP_REST_Server::READABLE,
           'callback' => array(
@@ -39,8 +39,7 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
         )
       ) );
 
-      // TODO fix formatting
-      register_rest_route( $this->namespace, '/' . $this->resource_name . '/(?P<id>[\d]+)', array(
+      register_rest_route( $this->namespace, '/' . $this->resource . '/(?P<id>[\d]+)', array(
          array(
            'methods' => WP_REST_Server::READABLE,
           'callback' => array(
@@ -64,8 +63,8 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
 
     public function get_items( $request ) {
       $args[ 'post_type' ] = $this->type;
-      $page                = (int) $request->get_param( 'page' );
-      $per_page            = (int) $request->get_param( 'per_page' );
+      $page = (int) $request->get_param( 'page' );
+      $per_page = (int) $request->get_param( 'per_page' );
 
       if ( $per_page ) {
         $args[ 'posts_per_page' ] = $per_page;
@@ -89,10 +88,10 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
 
       foreach ( $posts as $post ) {
         $response = $this->prepare_item_for_response( $post, $request );
-        $data[]   = $this->prepare_response_for_collection( $response );
+        $data[] = $this->prepare_response_for_collection( $response );
       }
 
-      return rest_ensure_response( $data );
+      return rest_ensure_response($data);
     }
 
     public function get_item( $request ) {
@@ -154,7 +153,7 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
         $post_data[ 'id' ] = (int) $post->ID;
       }
 
-      $post_data[ 'post_type' ] = get_post_type( $post->ID );
+      $post_data[ 'post_type' ] = $this->type;
 
       if ( isset( $post->post_date ) ) {
         $post_data[ '@timestamp' ] = get_the_date( 'c', $post->ID );
@@ -165,7 +164,7 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
       }
 
       if ( isset( $post->post_author ) ) {
-        $post_data[ 'author' ] = $this->get_author( $post->post_author );
+        $post_data[ 'author' ] = ES_API_HELPER::get_author( $post->post_author );
       }
 
       // pre-approved
@@ -180,7 +179,7 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
       }
 
       if ( isset( $post->post_content ) ) {
-        $post_data[ 'content' ] = $this->render_vs_shortcodes( $post );
+        $post_data[ 'content' ] = ES_API_HELPER::render_vs_shortcodes( $post );
       }
 
       if ( isset( $post->post_excerpt ) ) {
@@ -188,13 +187,13 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
       }
 
       // pre-approved
-      $post_data[ 'categories' ] = $this->get_categories( $post->ID );
-      $post_data[ 'tags' ]       = $this->get_tags( $post->ID );
-      $post_data[ 'language' ]   = $this->get_language( $post->ID );
+      $post_data[ 'categories' ] = ES_API_HELPER::get_categories( $post->ID );
+      $post_data[ 'tags' ] = ES_API_HELPER::get_tags( $post->ID );
+      $post_data[ 'language' ] = ES_API_HELPER::get_language( $post->ID );
 
       $feature_image_exists = has_post_thumbnail( $post->ID );
       if ( $feature_image_exists ) {
-        $post_data[ 'featured_image' ] = $this->get_featured_image( get_post_thumbnail_id( $post->ID ) );
+        $post_data[ 'featured_image' ] = ES_API_HELPER::get_featured_image( get_post_thumbnail_id( $post->ID ) );
       }
 
       if ( isset( $post->comment_count ) ) {
@@ -202,98 +201,6 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
       }
 
       return $post_data;
-    }
-
-    protected function get_featured_image( $id ) {
-      $image     = wp_prepare_attachment_for_js( $id );
-      $sizes     = $image[ 'sizes' ];
-      $sizeArray = array();
-      $srcArray  = array();
-      if ( !empty( $sizes ) ) {
-        foreach ( $sizes as $size ) {
-          if ( $size[ 'width' ] <= 770 ) {
-            if ( empty( $srcArray ) || $srcArray[ 'width' ] < $size[ 'width' ] ) {
-              $srcArray = array(
-                 "width" => $size[ 'width' ],
-                "height" => $size[ 'height' ],
-                "src" => $size[ 'url' ]
-              );
-            }
-          }
-          $sizeArray[] = array(
-             "width" => $size[ 'width' ],
-            "height" => $size[ 'height' ],
-            "src" => $size[ 'url' ]
-          );
-        }
-      }
-      $data = array(
-         "id" => $image[ 'id' ],
-        "src" => $srcArray[ 'src' ],
-        "width" => $srcArray[ 'width' ],
-        "height" => $srcArray[ 'height' ],
-        "title" => $image[ 'title' ],
-        "alt" => $image[ 'alt' ],
-        "caption" => $image[ 'caption' ],
-        "srcset" => $sizeArray
-      );
-      return $data;
-    }
-
-    protected function get_language( $id ) {
-      global $sitepress;
-      if ( $sitepress ) {
-        return apply_filters( 'wpml_post_language_details', null, $id );
-      } else {
-        return array(
-           'locale' => get_bloginfo( 'language' )
-        );
-      }
-    }
-
-    protected function get_categories( $id ) {
-      $categories = wp_get_post_categories( $id, array(
-         'fields' => 'all'
-      ) );
-      $catArray   = array(
-         'id' => array(),
-        'slug' => array(),
-        'name' => array ()
-      );
-
-      if ( !empty( $categories ) ) {
-        foreach ( $categories as $category ) {
-          $catArray[ 'id' ][]   = (int) $category->term_id;
-          $catArray[ 'slug' ][] = $category->slug;
-          $catArray[ 'name' ][] = $category->name;
-        }
-      }
-      return $catArray;
-    }
-
-    protected function get_tags( $id ) {
-      $tags     = wp_get_post_tags( $id );
-      $tagArray = array(
-         'id' => array(),
-        'slug' => array(),
-        'name' => array ()
-      );
-      if ( !empty( $tags ) ) {
-        foreach ( $tags as $tag ) {
-          $tagArray[ 'id' ][]   = $tag->term_id;
-          $tagArray[ 'slug' ][] = $tag->slug;
-          $tagArray[ 'name' ][] = $tag->name;
-        }
-      }
-      return $tagArray;
-    }
-
-    protected function get_author( $id ) {
-      $data = array(
-         'id' => (int) $id,
-        'name' => get_the_author_meta( 'nicename', $id )
-      );
-      return $data;
     }
 
     public function get_items_permissions_check( $request ) {
@@ -311,30 +218,10 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
       }
       return $status;
     }
-
-    function render_vs_shortcodes( $object ) {
-      if ( !class_exists( 'WPBMap' ) ) {
-        return apply_filters( 'the_content', $object->post_content );
-      }
-
-      WPBMap::addAllMappedShortcodes(); // This does all the work
-
-      global $post;
-      $post   = get_post( $object->ID );
-      $output = apply_filters( 'the_content', $post->post_content );
-
-      return $output;
-    }
-
-    function get_labels( $type ) {
-      global $wp_post_types;
-      $labels =& $wp_post_types[ $type ]->labels;
-      return $labels;
-    }
   }
 }
 
-function prefix_register_my_rest_routes() {
+function register_elasticsearch_rest_routes() {
   $post_types = get_post_types( array(
      'show_in_rest' => true
   ) );
@@ -347,4 +234,4 @@ function prefix_register_my_rest_routes() {
   }
 }
 
-add_action( 'rest_api_init', 'prefix_register_my_rest_routes' );
+add_action( 'rest_api_init', 'register_elasticsearch_rest_routes' );

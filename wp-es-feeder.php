@@ -3,10 +3,10 @@
 /**
  * @link              https://github.com/IIP-Design/wp-elasticsearch-feeder
  * @since             1.0.0
- * @package           Wp_Es_Feeder
+ * @package           wp_es_feeder
  * @wordpress-plugin
  * Plugin Name:       WP Elasticsearch Feeder
- * Description:       Creates a REST api endpoints and ingests posts and pages into Elasticsearch.
+ * Description:       Index Post-Types, Custom Post-Types and Attachments to Elasticsearch.
  * Version:           1.0.0
  * Author:            Max Orelus
  * Author URI:        http://github.com/MaxOrelus
@@ -21,9 +21,8 @@ if ( !defined( 'WPINC' ) ) {
 }
 
 // load elasticsearch REST api/elasticsearch feeder dependencies
-require plugin_dir_path( __FILE__ ) . 'includes/class-elasticsearch-wp-rest-api-controller.php';
 require plugin_dir_path( __FILE__ ) . 'includes/class-wp-es-feeder.php';
 
 // run elasticsearch feeder plugin
-$feeder = new Wp_Es_Feeder();
+$feeder = new wp_es_feeder();
 $feeder->run();
