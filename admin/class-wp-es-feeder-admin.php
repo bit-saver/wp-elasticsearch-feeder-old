@@ -47,9 +47,7 @@ class wp_es_feeder_Admin {
       'es_secret_key' => sanitize_text_field( $input[ 'es_secret_key' ] )
     );
 
-    $post_types = get_post_types( array(
-       'show_in_rest' => true
-    ) );
+    $post_types = get_post_types( array('public' => true));
 
     $types = array();
     foreach ( $post_types as $key => $value ) {

@@ -4,12 +4,14 @@ if ( !defined( 'ABSPATH' ) ) {
   exit;
 }
 
-if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
-  class ELASTICSEARCH_WP_REST_API_Controller extends WP_REST_Controller {
+if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
+  class WP_ES_FEEDER_REST_Controller extends WP_REST_Controller {
     public function __construct( $post_type ) {
+      $this->plugin_name = 'wp-es-feeder';
       $this->namespace = 'elasticsearch/v1';
       $this->resource = ES_API_HELPER::get_post_type_label($post_type, 'name');
       $this->type = $post_type;
+      $this->index_name = get_option($this->plugin_name)['es_index'];
     }
 
     public function register_routes() {
@@ -155,6 +157,9 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
 
       $post_data[ 'post_type' ] = $this->type;
 
+
+      $post_data['site'] = $this -> index_name;
+
       if ( isset( $post->post_date ) ) {
         $post_data[ '@timestamp' ] = get_the_date( 'c', $post->ID );
       }
@@ -221,15 +226,35 @@ if ( !class_exists( 'ELASTICSEARCH_WP_REST_API_Controller' ) ) {
   }
 }
 
+/*
+* Creates API endpoints for all public post-types. If you have a custom post-type, you must follow
+* the class convention "WP_ES_FEEDER_EXT_{TYPE}_Controller" if you want to customize the output
+* If no class convention is found, plugin will create default API routes for custom post types
+*/
+function register_post_types($type) {
+  $base_types = array(
+    'post' => true,
+    'page' => true,
+    'attachment' => true
+  );
+
+  if ((int) $base_types[$type]) {
+    $controller = new WP_ES_FEEDER_REST_Controller( $type );
+    $controller->register_routes();
+  } else if(!$base_types[$type] && !class_exists('WP_ES_FEEDER_EXT_'.strtoupper($type).'_Controller')) {
+    $controller = new WP_ES_FEEDER_REST_Controller( $type );
+    $controller->register_routes();
+  }
+}
+
 function register_elasticsearch_rest_routes() {
   $post_types = get_post_types( array(
-     'show_in_rest' => true
-  ) );
+     'public' => true
+  ));
 
   if ( is_array( $post_types ) && count( $post_types ) > 0 ) {
     foreach ( $post_types as $type ) {
-      $controller = new ELASTICSEARCH_WP_REST_API_Controller( $type );
-      $controller->register_routes();
+      register_post_types($type);
     }
   }
 }

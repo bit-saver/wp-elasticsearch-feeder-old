@@ -156,7 +156,7 @@
     if (!page) { page = 1; }
     if (!type) { throw new Error('getPostTypeList(): no post-type parameter supplied'); }
 
-    return request(settings.domain + '/wp-json/elasticsearch/v1/' + typeUtility(type) + '?page=' + page)
+    return request(settings.domain + '/wp-json/elasticsearch/v1/' + type + '?page=' + page)
       .then(function (data) {
         if (!(data instanceof Array)) {
           return true;
@@ -179,13 +179,6 @@
 
         return getPostTypeList(type, page);
       });
-  }
-
-  function typeUtility(type) {
-    if (type === 'media') {
-      return type;
-    }
-    return type + 's';
   }
 
   function indexRecord(data, type) {
@@ -269,10 +262,10 @@
     var types = [];
     $('[id^="es_post_type_"]').each(function (index, element) {
       if (element.checked) {
-        var tmpArray = element.id.split('_');
-        types.push(tmpArray[3]);
+        types.push($(element).next().text().toLowerCase())
       }
     });
+
     return types;
   }
 
