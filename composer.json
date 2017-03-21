@@ -1,0 +1,15 @@
+{
+    "name": "iip-design/wp-elasticsearch-feeder",
+    "type": "wordpress-plugin",
+    "description" : "Syncs content to ElasticSearch",
+    "authors": [
+        {
+            "name": "Office of Design, U.S. Department of State",
+            "email": "orelusm@america.gov"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+       "composer/installers": "~1.0"
+    }
+}
