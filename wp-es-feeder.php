@@ -6,7 +6,7 @@
  * @package           wp_es_feeder
  * @wordpress-plugin
  * Plugin Name:       WP Elasticsearch Feeder
- * Description:       Index Post-Types, Custom Post-Types and Attachments to Elasticsearch.
+ * Description:       Creates REST api endpoints for each post type and indexes them into Elasticsearch.
  * Version:           1.0.0
  * Author:            Max Orelus
  * Author URI:        http://github.com/MaxOrelus
