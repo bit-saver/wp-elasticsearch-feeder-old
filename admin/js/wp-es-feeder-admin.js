@@ -1,7 +1,6 @@
 (function ($) {
   'use strict';
   var settings = {};
-  var ELASTIC_PROXY = 'http://localhost:3000/api/elasticsearch';
 
   $(window).load(function () {
     init();
@@ -13,6 +12,18 @@
     createIndexClick();
     deleteIndexClick();
     reindexClick();
+  }
+
+  function wpRequest(data) {
+    return new Promise(function (resolve, reject) {
+      $.post(
+        ajaxurl, {
+          action: 'es_request',
+          data: data
+        }, function (response) {
+          resolve(response);
+        });
+    });
   }
 
   function testConnectionClick() {
@@ -56,27 +67,30 @@
   }
 
   function generatePostBody(method, url, elasticBody) {
-    return {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        url: url,
-        auth: $.extend({}, settings.auth.config),
-        options: {
-          method: method,
-          'content-type': 'application/json',
-          body: elasticBody
-        }
-      })
+    var options = {
+      method: method,
+      url: url
     };
+
+    if (elasticBody) {
+      try {
+        var body = JSON.stringify(elasticBody);
+        options.body = window.btoa(encodeURIComponent(body));
+      } catch (err) {
+        console.info('document endured errors while encoding:');
+        console.log(err);
+        console.info('This is your culprit', body);
+        console.log('\n\n');
+      }
+    }
+
+    return options;
   }
 
   function connectionRequest() {
     var opts = generatePostBody('GET', settings.server);
 
-    return request(ELASTIC_PROXY, opts)
+    return wpRequest(opts)
       .then(function (data) {
         if (data.error || !data) {
           var errorMessage = 'Connection failed';
@@ -93,7 +107,7 @@
   function createIndexRequest() {
     var opts = generatePostBody('PUT', settings.server + '/' + settings.index);
 
-    return request(ELASTIC_PROXY, opts)
+    return wpRequest(opts)
       .then(function (data) {
         if (data.error) {
           var errorMessage = 'Index creation failed.';
@@ -110,7 +124,7 @@
   function deleteIndexRequest() {
     var opts = generatePostBody('DELETE', settings.server + '/' + settings.index);
 
-    return request(ELASTIC_PROXY, opts)
+    return wpRequest(opts)
       .then(function (data) {
         if (data.error) {
           var errorMessage = 'Index deletion failed';
@@ -144,6 +158,7 @@
       }
     })
       .catch(function (error) {
+        console.error(error);
         $('.index-spinner').empty();
         var errorMessage = 'Error encountered while indexing.';
         jsonDisplay(
@@ -156,7 +171,9 @@
     if (!page) { page = 1; }
     if (!type) { throw new Error('getPostTypeList(): no post-type parameter supplied'); }
 
-    return request(settings.domain + '/wp-json/elasticsearch/v1/' + type + '?page=' + page)
+    return request(settings.domain + '/wp-json/elasticsearch/v1/' + type + '?page=' + page, {
+      credentials: 'include'
+    })
       .then(function (data) {
         if (!(data instanceof Array)) {
           return true;
@@ -164,7 +181,6 @@
         else if (!data.length) {
           return true;
         }
-
 
         data.forEach(function (record) {
           indexRecord(record, type);
@@ -184,13 +200,13 @@
   function indexRecord(data, type) {
     var opts = generatePostBody('POST', settings.server + '/' + settings.index + '/' + type, data);
 
-    return request(ELASTIC_PROXY, opts);
+    return wpRequest(opts);
   }
 
   function getCount() {
     var opts = generatePostBody('GET', settings.server + '/' + settings.index + '/_count')
 
-    request(ELASTIC_PROXY, opts).then(function (data) {
+    wpRequest(opts).then(function (data) {
       $('.index-spinner')
         .html('<span style="top: 10px; position: absolute;">Indexed ' + data.count + ' records.</span>');
       jsonDisplay(

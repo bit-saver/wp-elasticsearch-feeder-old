@@ -8,7 +8,7 @@ if ( !class_exists( wp_es_feeder ) ) {
     public function __construct() {
       $this->plugin_name = 'wp-es-feeder';
       $this->version = '1.0.0';
-      $this->proxy = 'http://localhost:3000/api/elasticsearch'; // proxy
+      $this->proxy = get_option($this->plugin_name)['es_url']; // proxy
       $this->error = '[WP_ES_FEEDER] [:LOG] ';
       $this->load_api();
       $this->load_dependencies();
@@ -45,6 +45,7 @@ if ( !class_exists( wp_es_feeder ) ) {
       add_action( 'save_post', array( $this, 'save_post' ), 10, 2 );
       add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );
       add_action( 'trash_post', array( &$this, 'delete_post' ) );
+      add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
     }
 
     public function run() {
@@ -71,10 +72,12 @@ if ( !class_exists( wp_es_feeder ) ) {
       $settings  = get_option( $this->plugin_name );
       $post_type = $post->post_type;
 
+      // return early if missing parameters
       if ( $post == null || !$settings[ 'es_post_types' ][ $post_type ] ) {
         return;
       }
 
+      // switch operation based on post status
       if ( $post->post_status === 'publish' ) {
         $this->addOrUpdate( $post );
       } else {
@@ -102,82 +105,68 @@ if ( !class_exists( wp_es_feeder ) ) {
     }
 
     public function addOrUpdate( $post ) {
+      // plural form of post type
       $post_type_name = ES_API_HELPER::get_post_type_label( $post->post_type, 'name' );
-      $opt = get_option( $this->plugin_name );
+      // settings and configuration for plugin
+      $config = get_option( $this->plugin_name );
 
-      $api = get_bloginfo( 'wpurl' ) . '/wp-json/elasticsearch/v1/' . $post_type_name . '/'
-        . $post->ID;
+      // api endpoint for wp-json
+      $wp_api_url = '/elasticsearch/v1/'.$post_type_name.'/'.$post->ID;
+      $request = new WP_REST_Request('GET', $wp_api_url);
+      $api_response = rest_do_request( $request );
+      $api_response = $api_response->data;
 
-      $data = @file_get_contents( $api );
-      if ( !$data ) {
-        error_log( print_r( $this->error . 'transition_post() file_get_contents failed.', true ) );
+      if (!$api_response) {
+        error_log( print_r( $this->error . 'addOrUpdate() calling wp rest failed', true ) );
         return;
       }
 
-      $record_exists_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type
-        . '/_search?q=id:' . $post->ID;
-
-      $es_data = @file_get_contents( $record_exists_url );
-      if ( !$es_data ) {
-        error_log( print_r( $this->error . 'addOrUpdate() file_get_contents failed', true ) );
-        return;
-      }
-
-      $es_data = json_decode( $es_data );
-      $isRecordFound = $es_data->hits->total;
-
-      if ( (int) $isRecordFound == (int) 0 ) {
-
-        $options = array(
-           'http' => array(
-             'method' => 'POST',
-            'header' => 'content-type: application/json',
-            'content' => json_encode( array(
-               'url' => $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type,
-              'auth' => array(
-                 'accessKeyId' => '',
-                'secrectAccessKey' => 'bob'
-              ),
-              'options' => array(
-                 'method' => 'POST',
-                'content-type' => 'application/json',
-                'body' => json_decode( $data )
-              )
-            ) )
-          )
-        );
-
-        $context  = stream_context_create( $options );
-        $response = @file_get_contents( $this->get_proxy_server(), false, $context );
-        if ( !$response ) {
-          error_log( print_r( $this->error . 'addOrUpdate()[add] file_get_contents failed', true ) );
-        }
-      }
-
-      $es_id   = $es_data->hits->hits[ 0 ]->_id;
-      $put_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type . '/' . $es_id;
+      // form elasticsearch search url to find existing record in elastic
+      $exists_url = $this->proxy.'/'
+        .$config[ 'es_index' ].'/'.$post->post_type
+        .'/_search?q=id:' . $post->ID;
 
       $options = array(
-         'http' => array(
-           'method' => 'POST',
-          'header' => 'content-type: application/json',
-          'content' => json_encode( array(
-             'url' => $put_url,
-            'auth' => array(
-               'accessKeyId' => '',
-              'secrectAccessKey' => 'bob'
-            ),
-            'options' => array(
-               'method' => 'PUT',
-              'content-type' => 'application/json',
-              'body' => json_decode( $data )
-            )
-          ) )
-        )
+        'url' => $exists_url,
+        'method' => 'GET'
       );
 
-      $context = stream_context_create( $options );
-      $response = @file_get_contents( $this->get_proxy_server(), false, $context );
+      $es_response = $this->es_request( $options );
+
+      if ( !$es_response ) {
+        error_log( print_r( $this->error . 'addOrUpdate() elasticsearch threw error', true ) );
+        return;
+      }
+
+      $existing_record_found = $es_response->hits->total;
+
+      // create new record in elastic if record doesn't exist
+      if ( (int)$existing_record_found == 0 ) {
+
+        $options = array(
+          'url' => $config[ 'es_url' ] . '/' . $config[ 'es_index' ] . '/' . $post->post_type,
+          'method' => 'POST',
+          'body' => $api_response
+        );
+
+        $response = $this->es_request( $options );
+        if ( !$response ) {
+          error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
+        }
+        return; // end create
+      }
+
+      // update existing document
+      $_id   = $es_response->hits->hits[ 0 ]->_id;
+      $put_url = $config[ 'es_url' ] . '/' . $config[ 'es_index' ] . '/' . $post->post_type . '/' . $_id;
+
+      $options = array(
+        'url' => $put_url,
+        'method' => 'PUT',
+        'body' => $api_response
+      );
+
+      $response = $this->es_request( $options );
       if ( !$response ) {
         error_log( print_r( $this->error . 'addOrUpdate()[update] file_get_contents failed', true ) );
       }
@@ -185,43 +174,82 @@ if ( !class_exists( wp_es_feeder ) ) {
 
     public function delete( $post ) {
       $opt = get_option( $this->plugin_name );
-      $record_exists_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type
+      $exists_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type
         . '/_search?q=id:' . $post->ID;
 
-      $es_data = @file_get_contents( $record_exists_url );
-      if ( !$es_data ) {
-        error_log( print_r( $this->error . '8=====D delete() file_get_contents failed', true ) );
+      $options = array(
+        'url' => $exists_url,
+        'method' => 'GET'
+      );
+
+      $es_response = $this->es_request( $options );
+      if ( !$es_response ) {
+        error_log( print_r( $this->error . 'delete() get request failed', true ) );
         return;
       }
 
-      $es_data = json_decode( $es_data );
-      $isFound = $es_data->hits->total;
-      error_log( print_r( $this->error . '8=====D Delete() Record found ' . $isFound, true ) );
-
-      if ( (int) $isFound == (int) 1 ) {
-        $es_id = $es_data->hits->hits[ 0 ]->_id;
-        $delete_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type . '/' . $es_id;
+      $existing_record_found = $es_response->hits->total;
+      if ( (int)$existing_record_found == 1 ) {
+        $_id = $es_response->hits->hits[ 0 ]->_id;
+        $delete_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type . '/' . $_id;
 
         $options = array(
-           'http' => array(
-             'method' => 'POST',
-            'header' => 'content-type: application/json',
-            'content' => json_encode( array(
-               'url' => $delete_url,
-              'auth' => array(
-                 'accessKeyId' => '',
-                'secrectAccessKey' => 'bob'
-              ),
-              'options' => array(
-                 'method' => 'DELETE',
-                'content-type' => 'application/json'
-              )
-            ) )
-          )
+           'url' => $delete_url,
+           'method' => 'DELETE'
         );
 
-        $context = stream_context_create( $options );
-        return @file_get_contents( $this->proxy, false, $context );
+        $this->es_request( $options );
+      }
+    }
+
+    public function es_request($request) {
+      if (!$request) {
+        $request = $_POST['data'];
+      } else {
+        $is_internal = true;
+      }
+
+      $curl = curl_init();
+      curl_setopt($curl, CURLOPT_URL, $request['url']);
+      curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+      curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+      curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+      curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+      curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
+
+      // if a body is provided
+      if ($request['body']) {
+        // unwrap the post data from ajax call
+        if (!$is_internal) {
+          $body = urldecode(base64_decode($request['body']));
+        } else {
+          $body = json_encode($request['body']);
+        }
+
+        // obtain string length
+        $length = strlen($body);
+
+        // curl options
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method'], 1);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+          'Content-Type: application/json',
+          'Content-Length: ' . $length
+        ));
+      } else {
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+          'Content-Type: application/json'
+        ));
+      }
+
+      $results = curl_exec($curl);
+      curl_close($curl);
+
+      if ($is_internal) {
+        return json_decode($results);
+      } else {
+        return wp_send_json(json_decode($results));
       }
     }
   }
