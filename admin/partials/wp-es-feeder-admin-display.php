@@ -24,8 +24,6 @@
 			if ($options) {
 				$es_url = $options['es_url'];
 				$es_index = $options['es_index'];
-				$es_access_key = $options['es_access_key'];
-				$es_secret_key = $options['es_secret_key'];
 				$es_post_types = $options['es_post_types'];
 			}
     ?>
@@ -53,18 +51,6 @@
 						<h2><span><?php esc_attr_e( 'Index Name', 'wp_admin_style' ); ?></span></h2>
 						<div class="inside">
 							<input type="text" placeholder="sitename.com" class="regular-text" id="es_index" name="<?php echo $this->plugin_name; ?>[es_index]" value="<?php if(!empty($es_index)) echo $es_index; ?>"/><br/>
-						</div>
-
-						<hr/>
-
-						<h2><span><?php esc_attr_e( 'AWS Authentication (optional)', 'wp_admin_style' ); ?></span></h2>
-
-						<div class="inside">
-							<input type="text" placeholder="Access Key ID" class="regular-text" id="es_access_key" name="<?php echo $this->plugin_name; ?>[es_access_key]" value="<?php if(!empty($es_access_key)) echo $es_access_key; ?>"/>
-						</div>
-
-						<div class="inside">
-							<input type="text" placeholder="Secret Access Key" class="regular-text" id="es_secret_key" name="<?php echo $this->plugin_name; ?>[es_secret_key]" value="<?php if(!empty($es_secret_key)) echo $es_secret_key; ?>"/>
 						</div>
 
 						<hr/>

@@ -42,14 +42,11 @@ class wp_es_feeder_Admin {
   public function validate( $input ) {
     $valid = array(
       'es_url' => sanitize_text_field( $input[ 'es_url' ] ),
-      'es_index' => sanitize_text_field( $input[ 'es_index' ] ),
-      'es_access_key' => sanitize_text_field( $input[ 'es_access_key' ] ),
-      'es_secret_key' => sanitize_text_field( $input[ 'es_secret_key' ] )
+      'es_index' => sanitize_text_field( $input[ 'es_index' ] )
     );
 
-    $post_types = get_post_types( array('public' => true));
-
     $types = array();
+    $post_types = get_post_types( array('public' => true));
     foreach ( $post_types as $key => $value ) {
       $types[ $value ] = ( isset( $input[ 'es_post_type_' . $value ] ) && !empty( $input[ 'es_post_type_' . $value ] ) ) ? 1 : 0;
     }
