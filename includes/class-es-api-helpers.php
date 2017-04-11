@@ -51,7 +51,9 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
     public static function get_language( $id ) {
       global $sitepress;
       if ( $sitepress ) {
-        return apply_filters( 'wpml_post_language_details', null, $id );
+        $output = apply_filters( 'wpml_post_language_details', null, $id );
+        $output['locale'] = str_replace('_', '-', $output['locale']);
+        return $output;
       } else {
         return array(
            'locale' => get_bloginfo( 'language' )
@@ -59,21 +61,55 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
       }
     }
 
+    public static function get_related_translated_posts( $id, $post_type ) {
+      global $sitepress;
+      if ( $sitepress ) {
+        $languages = array('en', 'es', 'fr', 'pt-br', 'ru', 'ar', 'zh-hans', 'fa', 'id', 'pt-pt');
+        $translations = array();
+
+        foreach ($languages as $language) {
+          $tmp = icl_object_id($id, $post_type, false, $language);
+          if ($tmp !== null) {
+            $translations[] = array(
+              'language' => $language,
+              'id' => icl_object_id($id, $post_type, false, $language)
+            );
+          }
+        }
+
+        return $translations;
+      }
+    }
+
     public static function get_categories( $id ) {
       $categories = wp_get_post_categories( $id, array(
          'fields' => 'all'
-      ) );
-      $output = array(
-         'id' => array(),
-        'slug' => array(),
-        'name' => array()
-      );
+      ));
+
+      $output = array();
 
       if ( !empty( $categories ) ) {
         foreach ( $categories as $category ) {
-          $output[ 'id' ][] = (int) $category->term_id;
-          $output[ 'slug' ][] = $category->slug;
-          $output[ 'name' ][] = $category->name;
+          $output[] = array(
+            'id' => (int) $category->term_id,
+            'slug' => $category->slug,
+            'name' => $category->name
+          );
+        }
+      }
+      return $output;
+    }
+
+    public static function get_categories_searchable($id) {
+      $categories = wp_get_post_categories( $id, array(
+         'fields' => 'all'
+      ));
+
+      $output = array();
+
+      if ( !empty( $categories ) ) {
+        foreach ( $categories as $category ) {
+          $output[] = $category->slug;
         }
       }
       return $output;
@@ -81,18 +117,32 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
 
     public static function get_tags($id ) {
       $tags = wp_get_post_tags( $id );
-      $output = array(
-         'id' => array(),
-        'slug' => array(),
-        'name' => array()
-      );
+
+      $output = array();
+
       if ( !empty( $tags ) ) {
         foreach ( $tags as $tag ) {
-          $output[ 'id' ][]   = $tag->term_id;
-          $output[ 'slug' ][] = $tag->slug;
-          $output[ 'name' ][] = $tag->name;
+          $output[] = array(
+            'id' => $tag->term_id,
+            'slug' => $tag->slug,
+            'name' => $tag->name
+          );
         }
       }
+      return $output;
+    }
+
+    public static function get_tags_searchable($id) {
+      $tags = wp_get_post_tags( $id );
+
+      $output = array();
+
+      if ( !empty( $tags ) ) {
+        foreach ( $tags as $tag ) {
+          $output[] = $tag->slug;
+        }
+      }
+
       return $output;
     }
 

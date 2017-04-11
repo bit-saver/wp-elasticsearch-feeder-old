@@ -156,17 +156,17 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         $post_data[ 'id' ] = (int) $post->ID;
       }
 
-      $post_data[ 'post_type' ] = $this->type;
+      $post_data[ 'type' ] = $this->type;
 
 
-      $post_data['site'] = $this -> index_name;
+      $post_data['domain'] = $this -> index_name;
 
       if ( isset( $post->post_date ) ) {
-        $post_data[ '@timestamp' ] = get_the_date( 'c', $post->ID );
+        $post_data[ 'published' ] = get_the_date( 'c', $post->ID );
       }
 
       if ( isset( $post->post_modified ) ) {
-        $post_data[ 'post_modified' ] = get_the_modified_date( 'c', $post->ID );
+        $post_data[ 'modified' ] = get_the_modified_date( 'c', $post->ID );
       }
 
       if ( isset( $post->post_author ) ) {
@@ -181,7 +181,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       }
 
       if ( isset( $post->post_name ) ) {
-        $post_data[ 'title_slug' ] = $post->post_name;
+        $post_data[ 'slug' ] = $post->post_name;
       }
 
       if ( isset( $post->post_content ) ) {
@@ -194,8 +194,11 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       // pre-approved
       $post_data[ 'categories' ] = ES_API_HELPER::get_categories( $post->ID );
+      $post_data[ 'categories.searchable' ] = ES_API_HELPER::get_categories_searchable( $post->ID );
       $post_data[ 'tags' ] = ES_API_HELPER::get_tags( $post->ID );
+      $post_data[ 'tags.searchable' ] = ES_API_HELPER::get_tags_searchable( $post->ID );
       $post_data[ 'language' ] = ES_API_HELPER::get_language( $post->ID );
+      $post_data[ 'translations' ] = ES_API_HELPER::get_related_translated_posts($post->ID, $post->post_type);
 
       $feature_image_exists = has_post_thumbnail( $post->ID );
       if ( $feature_image_exists ) {
