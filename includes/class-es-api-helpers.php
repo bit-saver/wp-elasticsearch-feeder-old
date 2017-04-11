@@ -29,14 +29,14 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
             }
           }
           $sizeArray[] = array(
-             "width" => $size[ 'width' ],
+            "width" => $size[ 'width' ],
             "height" => $size[ 'height' ],
             "src" => $size[ 'url' ]
           );
         }
       }
       $data = array(
-         "id" => $image[ 'id' ],
+        "id" => $image[ 'id' ],
         "src" => $srcArray[ 'src' ],
         "width" => $srcArray[ 'width' ],
         "height" => $srcArray[ 'height' ],
@@ -66,12 +66,12 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
       $output = array(
          'id' => array(),
         'slug' => array(),
-        'name' => array ()
+        'name' => array()
       );
 
       if ( !empty( $categories ) ) {
         foreach ( $categories as $category ) {
-          $output[ 'id' ][]   = (int) $category->term_id;
+          $output[ 'id' ][] = (int) $category->term_id;
           $output[ 'slug' ][] = $category->slug;
           $output[ 'name' ][] = $category->name;
         }
@@ -84,7 +84,7 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
       $output = array(
          'id' => array(),
         'slug' => array(),
-        'name' => array ()
+        'name' => array()
       );
       if ( !empty( $tags ) ) {
         foreach ( $tags as $tag ) {

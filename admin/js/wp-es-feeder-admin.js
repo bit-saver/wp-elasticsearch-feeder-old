@@ -92,7 +92,7 @@
 
     return wpRequest(opts)
       .then(function (data) {
-        if (data.error || !data) {
+        if (!data || data.error) {
           var errorMessage = 'Connection failed';
           jsonDisplay(
             JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
@@ -109,7 +109,7 @@
 
     return wpRequest(opts)
       .then(function (data) {
-        if (data.error) {
+        if (!data | data.error) {
           var errorMessage = 'Index creation failed.';
           jsonDisplay(
             JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
@@ -126,7 +126,7 @@
 
     return wpRequest(opts)
       .then(function (data) {
-        if (data.error) {
+        if (!data | data.error) {
           var errorMessage = 'Index deletion failed';
           jsonDisplay(
             JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
