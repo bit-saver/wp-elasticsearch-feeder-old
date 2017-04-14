@@ -230,7 +230,7 @@ if ( !class_exists( wp_es_feeder ) ) {
         $length = strlen($body);
 
         // curl options
-        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method'], 1);
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
           'Content-Type: application/json',
