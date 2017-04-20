@@ -194,9 +194,9 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       // pre-approved
       $post_data[ 'categories' ] = ES_API_HELPER::get_categories( $post->ID );
-      $post_data[ 'categories.searchable' ] = ES_API_HELPER::get_categories_searchable( $post->ID );
+      // $post_data[ 'categories.searchable' ] = ES_API_HELPER::get_categories_searchable( $post->ID );
       $post_data[ 'tags' ] = ES_API_HELPER::get_tags( $post->ID );
-      $post_data[ 'tags.searchable' ] = ES_API_HELPER::get_tags_searchable( $post->ID );
+      // $post_data[ 'tags.searchable' ] = ES_API_HELPER::get_tags_searchable( $post->ID );
       $post_data[ 'language' ] = ES_API_HELPER::get_language( $post->ID );
       $post_data[ 'translations' ] = ES_API_HELPER::get_related_translated_posts($post->ID, $post->post_type);
 
@@ -245,9 +245,11 @@ function register_post_types($type) {
   if ((int) $base_types[$type]) {
     $controller = new WP_ES_FEEDER_REST_Controller( $type );
     $controller->register_routes();
+    return;
   } else if(!$base_types[$type] && !class_exists('WP_ES_FEEDER_EXT_'.strtoupper($type).'_Controller')) {
     $controller = new WP_ES_FEEDER_REST_Controller( $type );
     $controller->register_routes();
+    return;
   }
 }
 

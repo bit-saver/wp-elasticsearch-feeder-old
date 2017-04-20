@@ -13,38 +13,18 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
     }
 
     public static function get_featured_image( $id ) {
-      $image     = wp_prepare_attachment_for_js( $id );
-      $sizes     = $image[ 'sizes' ];
-      $sizeArray = array();
-      $srcArray  = array();
-      if ( !empty( $sizes ) ) {
-        foreach ( $sizes as $size ) {
-          if ( $size[ 'width' ] <= 770 ) {
-            if ( empty( $srcArray ) || $srcArray[ 'width' ] < $size[ 'width' ] ) {
-              $srcArray = array(
-                 "width" => $size[ 'width' ],
-                "height" => $size[ 'height' ],
-                "src" => $size[ 'url' ]
-              );
-            }
-          }
-          $sizeArray[] = array(
-            "width" => $size[ 'width' ],
-            "height" => $size[ 'height' ],
-            "src" => $size[ 'url' ]
-          );
-        }
-      }
+      $image = wp_prepare_attachment_for_js( $id );
+
       $data = array(
         "id" => $image[ 'id' ],
-        "src" => $srcArray[ 'src' ],
-        "width" => $srcArray[ 'width' ],
-        "height" => $srcArray[ 'height' ],
         "title" => $image[ 'title' ],
         "alt" => $image[ 'alt' ],
         "caption" => $image[ 'caption' ],
-        "srcset" => $sizeArray
+        "mime" => $image[ 'mime' ],
+        "sizes" => $image[ 'sizes' ],
+        "fallback" => $image[ 'icon' ]
       );
+
       return $data;
     }
 

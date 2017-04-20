@@ -171,7 +171,9 @@
     if (!page) { page = 1; }
     if (!type) { throw new Error('getPostTypeList(): no post-type parameter supplied'); }
 
-    return request(settings.domain + '/wp-json/elasticsearch/v1/' + type + '?page=' + page, {
+    // apiType is the plural version of the post-type
+    var apiType = $('[data-type="' + type + '"]').text().toLowerCase();
+    return request(settings.domain + '/wp-json/elasticsearch/v1/' + apiType + '?page=' + page, {
       credentials: 'include'
     })
       .then(function (data) {
@@ -199,7 +201,6 @@
 
   function indexRecord(data, type) {
     var opts = generatePostBody('POST', settings.server + '/' + settings.index + '/' + type, data);
-
     return wpRequest(opts);
   }
 
@@ -278,7 +279,7 @@
     var types = [];
     $('[id^="es_post_type_"]').each(function (index, element) {
       if (element.checked) {
-        types.push($(element).next().text().toLowerCase())
+        types.push($(element).next().attr('data-type').toLowerCase())
       }
     });
 
