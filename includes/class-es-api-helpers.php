@@ -1,20 +1,16 @@
 <?php
-
 if ( !class_exists( 'ES_API_HELPER' ) ) {
   class ES_API_HELPER {
     public static function get_post_type_label($post_type = 'post', $display = 'name') {
       $obj = get_post_type_object($post_type);
-
       if (is_object($obj)) {
         $labels = $obj -> labels;
       }
-
       return strtolower($labels -> $display);
     }
 
     public static function get_featured_image( $id ) {
       $image = wp_prepare_attachment_for_js( $id );
-
       $data = array(
         "id" => $image[ 'id' ],
         "title" => $image[ 'title' ],
@@ -24,7 +20,6 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
         "sizes" => $image[ 'sizes' ],
         "fallback" => $image[ 'icon' ]
       );
-
       return $data;
     }
 
@@ -36,7 +31,12 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
         return $output;
       } else {
         return array(
-           'locale' => get_bloginfo( 'language' )
+          'language_code' => 'en',
+          'locale' => 'en-US',
+          'text_direction' => false,
+          'display_name' => 'English',
+          'native_name' => 'English',
+          'different_language' => true
         );
       }
     }
@@ -56,7 +56,6 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
             );
           }
         }
-
         return $translations;
       }
     }
@@ -122,7 +121,6 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
           $output[] = $tag->slug;
         }
       }
-
       return $output;
     }
 
