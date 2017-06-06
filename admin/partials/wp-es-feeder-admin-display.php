@@ -11,6 +11,8 @@
  * @package    wp_es_feeder
  * @subpackage wp_es_feeder/admin/partials
  */
+
+  global $wpdb;
 ?>
 
 <!-- This file should primarily consist of HTML with a little bit of PHP. -->
@@ -21,25 +23,51 @@
 			// Import all the options from the databse
 			$options = get_option($this->plugin_name);
 
-			if ($options) {
-				$es_url = $options['es_url'];
-				$es_index = $options['es_index'];
-				$es_post_types = $options['es_post_types'];
+			$es_wpdomain = $options['es_wpdomain']?$options['es_wpdomain']:null;
+			$es_url = $options['es_url']?$options['es_url']:null;
+			$es_index = $options['es_index']?$options['es_index']:null;
+			$es_post_types = $options['es_post_types']?$options['es_post_types']:null;
+
+			// Get domain(s) - support for Domain Mapping
+			$site = site_url();
+			$wpdb->dmtable = $wpdb->base_prefix . 'domain_mapping';
+			$domains = $wpdb->get_col( "SELECT domain FROM {$wpdb->dmtable}" );
+			$protocol = is_ssl() ? 'https://' : 'http://';
+
+			$selected = '';
+			if ( $site === $es_wpdomain || empty($es_wpdomain) ) 
+				$selected = 'selected';
+			
+			$domain_output = "<option value='$site' $selected>$site</option>";
+
+			if ( !empty($domains) ) {
+				foreach($domains as $domain) {
+					$selected = '';
+					if ( $domain === $es_wpdomain ) 
+						$selected = 'selected';
+					$domain_output .= "<option value='$domain' $selected>$protocol$domain</option>";
+				}
 			}
+
+
     ?>
 
     <?php
         settings_fields($this->plugin_name);
-        do_settings_sections($this->plugin_name);
+        //do_settings_sections($this->plugin_name);
     ?>
 
     <div id="poststuff">
 		<div id="post-body" class="metabox-holder columns-2">
 			<div id="post-body-content">
 				<div class="meta-box-sortables ui-sortable">
-					<div class="postbox">
-						<div class="inside" style="display: none;">
-							<input type="text" value="<?php echo site_url(); ?>" class="regular-text" id="es_wp_domain" name="<?php echo $this->plugin_name; ?>[es_wp_domain]" value="<?php echo $es_wp_domain; ?>" disabled/>
+					<div class="postbox">						
+						<h2><span><?php esc_attr_e( 'Indexed URL', 'wp_admin_style' ); ?></span></h2>
+						<div class="inside">
+							<select id="es_wpdomain" name="<?php echo $this->plugin_name; ?>[es_wpdomain]">
+								<?php echo $domain_output; ?>
+							</select>
+							<span>* If using domain mapping, mapped URLs will appear in dropdown.</span>
 						</div>
 
 						<h2><span><?php esc_attr_e( 'Elasticsearch Server URL', 'wp_admin_style' ); ?></span></h2>

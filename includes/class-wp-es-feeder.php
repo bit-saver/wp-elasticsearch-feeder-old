@@ -1,5 +1,5 @@
 <?php
-if ( !class_exists( wp_es_feeder ) ) {
+if ( !class_exists( 'wp_es_feeder' ) ) {
   class wp_es_feeder {
     protected $loader;
     protected $plugin_name;
