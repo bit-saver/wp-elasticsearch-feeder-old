@@ -40,19 +40,30 @@ class wp_es_feeder_Admin {
   }
 
   public function validate( $input ) {
+
     $valid = array(
+      'es_wpdomain' => sanitize_text_field( $input[ 'es_wpdomain' ] ),
       'es_url' => sanitize_text_field( $input[ 'es_url' ] ),
       'es_index' => sanitize_text_field( $input[ 'es_index' ] )
     );
 
     $types = array();
     $post_types = get_post_types( array('public' => true));
-    foreach ( $post_types as $key => $value ) {
-      $types[ $value ] = ( isset( $input[ 'es_post_type_' . $value ] ) && !empty( $input[ 'es_post_type_' . $value ] ) ) ? 1 : 0;
+
+    if ( isset( $input['es_post_types'] ) ) { 
+
+      $types = $input['es_post_types'];
+
+    } else {
+
+      foreach ( $post_types as $key => $value ) {
+        $types[ $value ] = ( isset( $input[ 'es_post_type_' . $value ] ) ) ? 1 : 0;
+      }
+
     }
 
     $valid[ 'es_post_types' ] = $types;
-
+    
     return $valid;
   }
 
