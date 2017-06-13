@@ -18,7 +18,6 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
         "caption" => $image[ 'caption' ],
         "mime" => $image[ 'mime' ],
         "sizes" => $image[ 'sizes' ],
-        "fallback" => $image[ 'icon' ]
       );
       return $data;
     }

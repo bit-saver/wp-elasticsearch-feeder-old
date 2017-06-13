@@ -159,7 +159,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       $post_data[ 'type' ] = $this->type;
 
 
-      $post_data['domain'] = $this -> index_name;
+      $post_data['site'] = $this -> index_name;
 
       if ( isset( $post->post_date ) ) {
         $post_data[ 'published' ] = get_the_date( 'c', $post->ID );
