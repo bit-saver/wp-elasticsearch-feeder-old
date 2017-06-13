@@ -226,6 +226,17 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
           $body = json_encode($request['body']);
         }
 
+        // check if domain is mapped
+        $opt = get_option( $this->plugin_name );
+        $protocol = is_ssl() ? 'https://' : 'http://';
+        $opt_url = $opt['es_wpdomain'];
+        $site_url = site_url();
+        $site_url = str_replace($protocol, '', $site_url);
+
+        if ($opt_url !== $site_url) {
+          $body = str_replace($site_url, $opt_url, $body);
+        }
+
         // obtain string length
         $length = strlen($body);
 
