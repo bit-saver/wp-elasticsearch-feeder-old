@@ -304,7 +304,7 @@
 
   function getSettings() {
     settings = {
-      domain: $('#es_wp_domain').val(),
+      domain: $('#es_wpdomain').val(),
       server: $('#es_url').val(),
       index: $('#es_index').val(),
       postTypes: getSelectedPostTypes(),
