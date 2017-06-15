@@ -45,7 +45,7 @@
 					$selected = '';
 					if ( $domain === $es_wpdomain ) 
 						$selected = 'selected';
-					$domain_output .= "<option value='$domain' $selected>$protocol$domain</option>";
+					$domain_output .= "<option value='$protocol$domain' $selected>$protocol$domain</option>";
 				}
 			}
 

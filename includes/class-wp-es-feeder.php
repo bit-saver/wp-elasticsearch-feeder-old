@@ -230,6 +230,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $opt = get_option( $this->plugin_name );
         $protocol = is_ssl() ? 'https://' : 'http://';
         $opt_url = $opt['es_wpdomain'];
+        $opt_url = str_replace($protocol, '', $opt_url);
         $site_url = site_url();
         $site_url = str_replace($protocol, '', $site_url);
 
