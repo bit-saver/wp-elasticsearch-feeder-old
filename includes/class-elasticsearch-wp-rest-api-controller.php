@@ -175,9 +175,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       // pre-approved
       $opt = get_option( $this->plugin_name );
-      $protocol = is_ssl() ? 'https://' : 'http://';
       $opt_url = $opt['es_wpdomain'];
-      $opt_url = str_replace($protocol, '', $opt_url);
       $post_data[ 'link' ] = str_replace(site_url(), $opt_url, get_permalink( $post->ID ));
 
       if ( isset( $post->post_title ) ) {
