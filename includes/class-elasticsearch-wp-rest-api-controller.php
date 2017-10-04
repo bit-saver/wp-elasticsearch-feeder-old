@@ -244,11 +244,12 @@ function register_post_types($type) {
     'attachment' => true
   );
 
-  if ((int) $base_types[$type]) {
+  $is_base_type = array_key_exists( $type, $base_types);
+  if ((int) $is_base_type ) {
     $controller = new WP_ES_FEEDER_REST_Controller( $type );
     $controller->register_routes();
     return;
-  } else if(!$base_types[$type] && !class_exists('WP_ES_FEEDER_EXT_'.strtoupper($type).'_Controller')) {
+  } else if(!$is_base_type && !class_exists('WP_ES_FEEDER_EXT_'.strtoupper($type).'_Controller')) {
     $controller = new WP_ES_FEEDER_REST_Controller( $type );
     $controller->register_routes();
     return;
