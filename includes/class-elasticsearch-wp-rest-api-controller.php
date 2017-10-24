@@ -201,7 +201,12 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       // $post_data[ 'tags.searchable' ] = ES_API_HELPER::get_tags_searchable( $post->ID );
       $post_data[ 'language' ] = ES_API_HELPER::get_language( $post->ID );
       $post_data[ 'translations' ] = ES_API_HELPER::get_related_translated_posts($post->ID, $post->post_type);
-
+      
+      $custom_taxonomies = ES_API_HELPER::get_custom_taxonomies($post->ID);
+      if( count( $custom_taxonomies) ) {
+        $post_data[ 'taxonomies' ] = $custom_taxonomies;
+      }
+      
       $feature_image_exists = has_post_thumbnail( $post->ID );
       if ( $feature_image_exists ) {
         $post_data[ 'featured_image' ] = ES_API_HELPER::get_featured_image( get_post_thumbnail_id( $post->ID ) );

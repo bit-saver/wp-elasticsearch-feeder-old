@@ -1,6 +1,8 @@
 <?php
 if ( !class_exists( 'ES_API_HELPER' ) ) {
+  
   class ES_API_HELPER {
+
     public static function get_post_type_label($post_type = 'post', $display = 'name') {
       $obj = get_post_type_object($post_type);
       if (is_object($obj)) {
@@ -77,6 +79,38 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
       }
       return $output;
     }
+    
+
+    public static function get_custom_taxonomies( $id ) {
+      $custom_taxonomies = get_taxonomies( array( 'public' => true, '_builtin' => false) ); 
+      $taxonomies = get_post_taxonomies( $id );   
+
+      $output = array();
+
+      if ( !empty($taxonomies) ) {
+        foreach ( $taxonomies as $taxonomomy ) {
+         if( in_array($taxonomomy, $custom_taxonomies ) ) {
+           $terms = wp_get_post_terms( $id,  $taxonomomy, array("fields" => "names", "fields" => 'all') );
+           if( count($terms) ) {
+            $output[$taxonomomy] = self::remap_terms( $terms );
+          }
+        }
+      } 
+      return  $output;
+    }
+  }
+
+    public static function remap_terms ( $terms ) {
+      $arr = array();
+      foreach ( $terms as $term ) {
+        $arr[] = array(
+          'id' => $term->term_id,
+          'slug' => $term->slug,
+          'name' => $term->name
+        );
+      }
+      return $arr;
+    }
 
     public static function get_categories_searchable($id) {
       $categories = wp_get_post_categories( $id, array(
@@ -125,14 +159,21 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
 
     public static function get_author( $id ) {
       $data = array(
-         'id' => (int) $id,
-        'name' => get_the_author_meta( 'nicename', $id )
+        'id' => (int) $id,
+       // 'name' => get_the_author_meta( 'nicename', $id ),
+        'name' => get_the_author_meta( 'display_name', $id )
       );
       return $data;
     }
 
+    /**
+     * Renders Visual Composer shortcodes if Visual Composer is turned on
+     *
+     * @param [type] $object
+     * @return void
+     */
     public static function render_vs_shortcodes( $object ) {
-      if ( !class_exists( 'WPBMap' ) ) {
+      if ( !class_exists( 'WPBMap' ) ) { // VC Class
         return apply_filters( 'the_content', $object->post_content );
       }
 
