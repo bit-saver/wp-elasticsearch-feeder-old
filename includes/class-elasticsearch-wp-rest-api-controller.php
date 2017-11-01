@@ -14,6 +14,12 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       $this->index_name = get_option($this->plugin_name)['es_index'];
     }
 
+    // _iip_donot_index_option ismeta data added with cmb2
+    public function shouldIndex( $post ) {
+      $doNotIndex = get_post_meta( $post->ID, '_iip_donot_index_option', true );
+      return ( $doNotIndex == 'on' ) ? false : true;
+    }
+
     public function register_routes() {
       register_rest_route( $this->namespace, '/' . $this->resource, array(
          array(
@@ -43,7 +49,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       register_rest_route( $this->namespace, '/' . $this->resource . '/(?P<id>[\d]+)', array(
          array(
-           'methods' => WP_REST_Server::READABLE,
+          'methods' => WP_REST_Server::READABLE,
           'callback' => array(
              $this,
             'get_item'
@@ -89,8 +95,10 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       }
 
       foreach ( $posts as $post ) {
-        $response = $this->prepare_item_for_response( $post, $request );
-        $data[] = $this->prepare_response_for_collection( $response );
+        if( $this->shouldIndex($post) ) {
+          $response = $this->prepare_item_for_response( $post, $request );
+          $data[] = $this->prepare_response_for_collection( $response );
+        }
       }
 
       return rest_ensure_response($data);
@@ -98,6 +106,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
     public function get_item( $request ) {
       $id = (int) $request[ 'id' ];
+      $response = '';
 
       $post = $this->type === 'post' ? get_post( $id ) : get_page( $id );
 
@@ -105,7 +114,9 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         return rest_ensure_response( array ());
       }
 
-      $response = $this->prepare_item_for_response( $post, $request );
+      if( $this->shouldIndex($post) ) {
+        $response = $this->prepare_item_for_response( $post, $request );
+     }
 
       return $response;
     }
@@ -157,7 +168,6 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       }
 
       $post_data[ 'type' ] = $this->type;
-
 
       $post_data['site'] = $this -> index_name;
 

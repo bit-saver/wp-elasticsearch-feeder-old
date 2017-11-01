@@ -79,7 +79,14 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       // switch operation based on post status
       if ( $post->post_status === 'publish' ) {
-        $this->addOrUpdate( $post );
+        if( isset($_POST['_iip_donot_index_option']) ) {
+          $doNotIndex = $_POST['_iip_donot_index_option'];
+          if( $doNotIndex === 'on' )  {
+            $this->delete( $post );
+          }
+        } else {
+           $this->addOrUpdate( $post );
+        }
       } else {
         if ( $post->post_status === 'trash' ) {
           $this->delete( $post );
