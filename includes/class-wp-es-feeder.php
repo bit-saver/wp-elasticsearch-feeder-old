@@ -71,6 +71,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     public function save_post( $id, $post ) {
       $settings  = get_option( $this->plugin_name );
       $post_type = $post->post_type;
+      $doNotIndex = false;
 
       // return early if missing parameters
       if ( $post == null || !$settings[ 'es_post_types' ][ $post_type ] ) {
@@ -79,13 +80,13 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       // switch operation based on post status
       if ( $post->post_status === 'publish' ) {
-        if( isset($_POST['_iip_donot_index_option']) ) {
-          $doNotIndex = $_POST['_iip_donot_index_option'];
-          if( $doNotIndex === 'on' )  {
-            $this->delete( $post );
-          }
+      
+        // check to see if post should be indexed or removed from index
+        $shouldIndex = $_POST['_iip_index_post_to_cdp_option'];    
+        if( $shouldIndex === 'yes' ) {
+          $this->addOrUpdate( $post );
         } else {
-           $this->addOrUpdate( $post );
+          $this->delete( $post );
         }
       } else {
         if ( $post->post_status === 'trash' ) {
