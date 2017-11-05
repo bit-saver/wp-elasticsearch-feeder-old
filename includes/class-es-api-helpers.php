@@ -36,11 +36,11 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
     }
 
     public static function get_language_by_locale( $locale ) {
-      Language_Helper::get_language_by_locale( $locale );
+      return Language_Helper::get_language_by_locale( $locale );
     }
 
     public static function get_language_by_meta_field( $id, $meta_field ) {
-       Language_Helper::get_language_by_meta_field( $id, $meta_field );
+       return Language_Helper::get_language_by_meta_field( $id, $meta_field );
     }
 
     public static function get_related_translated_posts( $id, $post_type ) {
