@@ -46,7 +46,7 @@ class Language_Helper {
   }
 
   public static function get_language_by_meta_field( $id, $meta_field ) { 
-    $locale = get_post_meta( $id, $meta_field, true );   //'america_courses_language
+    $locale = get_post_meta( $id, $meta_field, true );   //'
     $locale = empty( $locale ) ? 'en' : $locale;
     return self::LANGUAGE_HASH[$locale];
   }

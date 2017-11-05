@@ -31,13 +31,22 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
         $output['locale'] = str_replace('_', '-', $output['locale']);
         return $output;
       } else {
-        return Language_Helper::get_language_by_locale( 'en' );
+        return self::get_language_by_locale( 'en' );
       }
+    }
+
+    public static function get_language_by_locale( $locale ) {
+      Language_Helper::get_language_by_locale( $locale );
+    }
+
+    public static function get_language_by_meta_field( $id, $meta_field ) {
+       Language_Helper::get_language_by_meta_field( $id, $meta_field );
     }
 
     public static function get_related_translated_posts( $id, $post_type ) {
       global $sitepress;
       if ( $sitepress ) {
+        // @todo Move all language related info to Language helper
         $languages = array('en', 'es', 'fr', 'pt-br', 'ru', 'ar', 'zh-hans', 'fa', 'id', 'pt-pt');
         $translations = array();
 
