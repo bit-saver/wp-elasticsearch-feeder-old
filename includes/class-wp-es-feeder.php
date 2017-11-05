@@ -17,6 +17,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     function load_api() {
       require plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-es-api-helpers.php';
+      require plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-language-config.php';
       require plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-elasticsearch-wp-rest-api-controller.php';
     }
 

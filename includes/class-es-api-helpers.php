@@ -31,14 +31,7 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
         $output['locale'] = str_replace('_', '-', $output['locale']);
         return $output;
       } else {
-        return array(
-          'language_code' => 'en',
-          'locale' => 'en-US',
-          'text_direction' => false,
-          'display_name' => 'English',
-          'native_name' => 'English',
-          'different_language' => true
-        );
+        return Language_Helper::get_language_by_locale( 'en' );
       }
     }
 
