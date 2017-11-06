@@ -84,10 +84,12 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       
         // check to see if post should be indexed or removed from index
         $shouldIndex = $_POST['_iip_index_post_to_cdp_option'];    
-        if( $shouldIndex === 'yes' ) {
-          $this->addOrUpdate( $post );
-        } else {
+        
+        // default to indexing - post has to be specifically set to 'no'
+        if( $shouldIndex === 'no' ) { 
           $this->delete( $post );
+        } else {
+          $this->addOrUpdate( $post );
         }
       } else {
         if ( $post->post_status === 'trash' ) {
