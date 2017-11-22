@@ -34,6 +34,44 @@ class wp_es_feeder_Admin {
     return array_merge( $links, $mylinks );
   }
 
+  function add_admin_index_to_cdp() {
+    $screens = ['post', 'page'];
+    foreach ($screens as $screen) {
+        add_meta_box(
+            'index-to-cdp-mb',           // Unique ID
+            'Index Post to CDP',  // Box title
+            array($this, 'index_to_cdp_display'),  // Content callback, must be of type callable
+            $screen,                   // Post type
+            'side',
+            'high'
+        );
+    }
+  }
+
+  function index_to_cdp_display($post) {
+      $value = get_post_meta($post->ID, '_index_post_to_cdp_option', true);
+      ?>
+      <input 
+        type="radio" id="index_cdp_yes" 
+        name="index_post_to_cdp_option" 
+        value="yes" 
+        style="margin-top:-1px; vertical-align:middle;"
+        <?php checked($value, ''); ?>
+        <?php checked($value, 'yes'); ?>
+      />
+      <label for="index_cdp_yes">Yes</label>
+      <input 
+        type="radio" 
+        id="index_cdp_no" 
+        name="index_post_to_cdp_option" 
+        value="no" 
+        style="margin-top:-1px; margin-left: 10px; vertical-align:middle;"
+        <?php checked($value, 'no'); ?>
+      />
+      <label for="index_cdp_no">No</label>
+      <?php
+  }
+
   // Render the settings page for this plugin.
   public function display_plugin_setup_page() {
     include_once( 'partials/wp-es-feeder-admin-display.php' );

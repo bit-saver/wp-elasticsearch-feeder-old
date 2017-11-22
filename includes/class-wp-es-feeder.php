@@ -35,6 +35,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       // add menu item
       $this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_admin_menu' );
 
+      // add "Do not index" box to posts and pages
+      $this->loader->add_action( 'add_meta_boxes', $plugin_admin, 'add_admin_index_to_cdp' );
+
       // add settings link to plugin
       $plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
       $this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
@@ -74,6 +77,14 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $post_type = $post->post_type;
       $doNotIndex = false;
 
+      if (array_key_exists('index_post_to_cdp_option', $_POST)) {
+        update_post_meta(
+            $id,
+            '_index_post_to_cdp_option',
+            $_POST['index_post_to_cdp_option']
+        );
+      }
+
       // return early if missing parameters
       if ( $post == null || !$settings[ 'es_post_types' ][ $post_type ] ) {
         return;
@@ -83,7 +94,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       if ( $post->post_status === 'publish' ) {
       
         // check to see if post should be indexed or removed from index
-        $shouldIndex = $_POST['_iip_index_post_to_cdp_option'];    
+        $shouldIndex = $_POST['index_post_to_cdp_option'];    
         
         // default to indexing - post has to be specifically set to 'no'
         if( $shouldIndex === 'no' ) { 
