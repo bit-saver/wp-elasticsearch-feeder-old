@@ -16,8 +16,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
     // _iip_donot_index_option ismeta data added with cmb2
     public function shouldIndex( $post ) {
-      $doNotIndex = get_post_meta( $post->ID, '_iip_donot_index_option', true );
-      return ( $doNotIndex === 'no' ) ? false : true;
+      return ES_API_HELPER::get_index_to_cdp($post->ID);
     }
 
     public function register_routes() {
@@ -106,7 +105,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
     public function get_item( $request ) {
       $id = (int) $request[ 'id' ];
-      $response = '';
+      $response = array();
 
       $post = $this->type === 'post' ? get_post( $id ) : get_page( $id );
 
@@ -211,7 +210,6 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       // $post_data[ 'tags.searchable' ] = ES_API_HELPER::get_tags_searchable( $post->ID );
       $post_data[ 'language' ] = ES_API_HELPER::get_language( $post->ID );
       $post_data[ 'translations' ] = ES_API_HELPER::get_related_translated_posts($post->ID, $post->post_type);
-      $post_data[ 'index_to_cdp' ] = ES_API_HELPER::get_index_to_cdp($post->ID);
       
       $custom_taxonomies = ES_API_HELPER::get_custom_taxonomies($post->ID);
       if( count( $custom_taxonomies) ) {
