@@ -35,6 +35,15 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
       }
     }
 
+    public static function get_index_to_cdp( $id ) {
+      $value = get_post_meta($id, '_index_post_to_cdp_option', true);
+
+      if ( $value === 'no' ) 
+        return false;
+
+      return true;
+    }
+
     public static function get_language_by_locale( $locale ) {
       return Language_Helper::get_language_by_locale( $locale );
     }

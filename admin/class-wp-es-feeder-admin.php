@@ -35,41 +35,31 @@ class wp_es_feeder_Admin {
   }
 
   function add_admin_index_to_cdp() {
-    $screens = ['post', 'page'];
-    foreach ($screens as $screen) {
-        add_meta_box(
-            'index-to-cdp-mb',           // Unique ID
-            'Index Post to CDP',  // Box title
-            array($this, 'index_to_cdp_display'),  // Content callback, must be of type callable
-            $screen,                   // Post type
-            'side',
-            'high'
-        );
+
+    $options = get_option($this->plugin_name);
+    $es_post_types = $options['es_post_types']?$options['es_post_types']:null;
+    $screens = array();
+    if ( $es_post_types ) {
+      foreach($es_post_types as $key=>$value){
+        if ($value) {
+          array_push($screens, $key);
+        }
+      }
+    }
+    foreach( $screens as $screen ) {
+      add_meta_box(
+          'index-to-cdp-mb',           // Unique ID
+          'Index Post to CDP',  // Box title
+          array($this, 'index_to_cdp_display'),  // Content callback, must be of type callable
+          $screen,                   // Post type
+          'side',
+          'high'
+      );
     }
   }
 
   function index_to_cdp_display($post) {
-      $value = get_post_meta($post->ID, '_index_post_to_cdp_option', true);
-      ?>
-      <input 
-        type="radio" id="index_cdp_yes" 
-        name="index_post_to_cdp_option" 
-        value="yes" 
-        style="margin-top:-1px; vertical-align:middle;"
-        <?php checked($value, ''); ?>
-        <?php checked($value, 'yes'); ?>
-      />
-      <label for="index_cdp_yes">Yes</label>
-      <input 
-        type="radio" 
-        id="index_cdp_no" 
-        name="index_post_to_cdp_option" 
-        value="no" 
-        style="margin-top:-1px; margin-left: 10px; vertical-align:middle;"
-        <?php checked($value, 'no'); ?>
-      />
-      <label for="index_cdp_no">No</label>
-      <?php
+    include_once( 'partials/wp-es-feeder-index-to-cdp-display.php' );
   }
 
   // Render the settings page for this plugin.
