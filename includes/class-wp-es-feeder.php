@@ -75,12 +75,11 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     public function save_post( $id, $post ) {
       $settings  = get_option( $this->plugin_name );
       $post_type = $post->post_type;
-      $doNotIndex = false;
 
       if (array_key_exists('index_post_to_cdp_option', $_POST)) {
         update_post_meta(
             $id,
-            '_index_post_to_cdp_option',
+            '_iip_index_post_to_cdp_option',
             $_POST['index_post_to_cdp_option']
         );
       }

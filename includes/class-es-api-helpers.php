@@ -36,7 +36,7 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
     }
 
     public static function get_index_to_cdp( $id ) {
-      $value = get_post_meta($id, '_index_post_to_cdp_option', true);
+      $value = get_post_meta($id, '_iip_index_post_to_cdp_option', true);
 
       return ( $value === 'no' ) ? false : true;
     }

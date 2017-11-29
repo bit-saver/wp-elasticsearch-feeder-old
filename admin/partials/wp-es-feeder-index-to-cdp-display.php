@@ -1,4 +1,4 @@
-<?php $value = get_post_meta($post->ID, '_index_post_to_cdp_option', true); ?>
+<?php $value = get_post_meta($post->ID, '_iip_index_post_to_cdp_option', true); ?>
 <input 
   type="radio" id="index_cdp_yes" 
   name="index_post_to_cdp_option" 

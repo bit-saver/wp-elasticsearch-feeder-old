@@ -14,7 +14,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       $this->index_name = get_option($this->plugin_name)['es_index'];
     }
 
-    // _iip_donot_index_option ismeta data added with cmb2
+    // _iip_index_post_to_cdp_option is meta data
     public function shouldIndex( $post ) {
       return ES_API_HELPER::get_index_to_cdp($post->ID);
     }
