@@ -10,6 +10,7 @@
   function init() {
     testConnectionClick();
     createIndexClick();
+    queryIndexClick();
     deleteIndexClick();
     reindexClick();
   }
@@ -37,6 +38,13 @@
     $('#es_create_index').on('click', function (e) {
       if (!checkpoint()) return;
       createIndexRequest();
+    });
+  }
+
+  function queryIndexClick() {
+    $('#es_query_index').on('click', function (e) {
+      if (!checkpoint()) return;
+      getCount();
     });
   }
 
@@ -209,7 +217,7 @@
 
     wpRequest(opts).then(function (data) {
       $('.index-spinner')
-        .html('<span style="top: 10px; position: absolute;">Indexed ' + data.count + ' records.</span>');
+        .html('<span style="top: 10px; position: absolute;">' + data.count + ' records indexed.</span>');
       jsonDisplay(
         JSON.stringify(data, null, 2)
       );
