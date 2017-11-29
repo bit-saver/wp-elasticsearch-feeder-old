@@ -216,8 +216,9 @@
     var opts = generatePostBody('GET', settings.server + '/' + settings.index + '/_count')
 
     wpRequest(opts).then(function (data) {
+      let count = (typeof data.count === "undefined") ? 0 : data.count;
       $('.index-spinner')
-        .html('<span style="top: 10px; position: absolute;">' + data.count + ' records indexed.</span>');
+        .html('<span style="top: 10px; position: absolute;">' + count + ' records indexed.</span>');
       jsonDisplay(
         JSON.stringify(data, null, 2)
       );
