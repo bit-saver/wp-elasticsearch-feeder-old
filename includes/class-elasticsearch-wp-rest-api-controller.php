@@ -87,6 +87,19 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         }
       }
 
+      $args['meta_query'] = array(
+        'relation' => 'OR',
+        array(
+          'key'     => '_iip_index_post_to_cdp_option',
+          'compare' => 'NOT EXISTS'
+        ),
+        array(
+          'key'     => '_iip_index_post_to_cdp_option',
+          'value'   => 'no',
+          'compare' => '!='
+        ),
+      );
+
       $posts = get_posts( $args );
 
       if ( empty( $posts ) ) {
@@ -94,10 +107,8 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       }
 
       foreach ( $posts as $post ) {
-        if( $this->shouldIndex($post) ) {
-          $response = $this->prepare_item_for_response( $post, $request );
-          $data[] = $this->prepare_response_for_collection( $response );
-        }
+        $response = $this->prepare_item_for_response( $post, $request );
+        $data[] = $this->prepare_response_for_collection( $response );
       }
 
       return rest_ensure_response($data);
