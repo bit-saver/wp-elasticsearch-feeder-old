@@ -102,9 +102,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
           $this->addOrUpdate( $post );
         }
       } else {
-        if ( $post->post_status === 'trash' ) {
-          $this->delete( $post );
-        }
+        $this->delete( $post );
       }
     }
 
