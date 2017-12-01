@@ -118,7 +118,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       $id = (int) $request[ 'id' ];
       $response = array();
 
-      $post = $this->type === 'post' ? get_post( $id ) : get_page( $id );
+      $post = get_post( $id );
 
       if ( empty( $post ) ) {
         return rest_ensure_response( array ());
@@ -126,7 +126,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       if( $this->shouldIndex($post) ) {
         $response = $this->prepare_item_for_response( $post, $request );
-     }
+      }
 
       return $response;
     }

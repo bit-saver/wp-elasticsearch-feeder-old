@@ -93,7 +93,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       if ( $post->post_status === 'publish' ) {
       
         // check to see if post should be indexed or removed from index
-        $shouldIndex = $_POST['index_post_to_cdp_option'];    
+        $shouldIndex = $_POST['index_post_to_cdp_option'];
         
         // default to indexing - post has to be specifically set to 'no'
         if( $shouldIndex === 'no' ) { 
