@@ -20,7 +20,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     }
 
     public function register_routes() {
-      register_rest_route( $this->namespace, '/' . $this->resource, array(
+      register_rest_route( $this->namespace, '/' . rawurlencode($this->resource), array(
          array(
            'methods' => WP_REST_Server::READABLE,
           'callback' => array(
@@ -46,7 +46,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         )
       ) );
 
-      register_rest_route( $this->namespace, '/' . $this->resource . '/(?P<id>[\d]+)', array(
+      register_rest_route( $this->namespace, '/' . rawurlencode($this->resource) . '/(?P<id>[\d]+)', array(
          array(
           'methods' => WP_REST_Server::READABLE,
           'callback' => array(
