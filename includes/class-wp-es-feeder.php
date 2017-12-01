@@ -130,7 +130,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $config = get_option( $this->plugin_name );
 
       // api endpoint for wp-json
-      $wp_api_url = '/elasticsearch/v1/'.$post_type_name.'/'.$post->ID;
+      $wp_api_url = '/elasticsearch/v1/'.rawurlencode($post_type_name).'/'.$post->ID;
       $request = new WP_REST_Request('GET', $wp_api_url);
       $api_response = rest_do_request( $request );
       $api_response = $api_response->data;
