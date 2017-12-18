@@ -86,32 +86,32 @@
 						<h2><span><?php esc_attr_e( 'Post Types', 'wp_admin_style' ); ?></span></h2>
 						<div class="inside">
 							<p>Select the post-types to index into Elasticsearch.</p>
-							<?php $post_types = get_post_types(array(
-                'public' => true
-              ));
-
+							<?php 
+							$post_types = get_post_types( array( 'public' => true ) );
 							foreach($post_types as $key => $value) {
 								if( array_key_exists( $key, $es_post_types) ) {
-					
 									// whether the post type is active or not
 									$value_state = $es_post_types[$value];
-
-									if ($value_state == 1) {
-										$checked = 'checked="checked"';
-									} else {
-										$checked = '';
-									}
-
-									// html structure
-									echo '<fieldset>
-													<legend class="screen-reader-text"><span>es_post_type_'.$value.'</span></legend>
-													<label for="es_post_type_'.$value.'" class="post_type_label">
-														<input type="checkbox" id="es_post_type_'.$value.'" name="'.$this->plugin_name.'[es_post_type_'.$value.']" '.$checked.'/>
-														<span data-type="'.$value.'">'.ucfirst(ES_API_HELPER::get_post_type_label($value, 'name')).'</span>
-													</label>
-												</fieldset>';
+								} else {
+									$value_state = 0;
 								}
-							}?>
+
+								if ($value_state == 1) {
+									$checked = 'checked="checked"';
+								} else {
+									$checked = '';
+								}
+
+								// html structure
+								echo '<fieldset>
+												<legend class="screen-reader-text"><span>es_post_type_'.$value.'</span></legend>
+												<label for="es_post_type_'.$value.'" class="post_type_label">
+													<input type="checkbox" id="es_post_type_'.$value.'" name="'.$this->plugin_name.'[es_post_type_'.$value.']" '.$checked.'/>
+													<span data-type="'.$value.'">'.ucfirst(ES_API_HELPER::get_post_type_label($value, 'name')).'</span>
+												</label>
+											</fieldset>';
+							}
+							?>
 						</div>
 
 						<hr/>
