@@ -89,18 +89,9 @@
 							<?php 
 							$post_types = get_post_types( array( 'public' => true ) );
 							foreach($post_types as $key => $value) {
-								if( array_key_exists( $key, $es_post_types) ) {
-									// whether the post type is active or not
-									$value_state = $es_post_types[$value];
-								} else {
-									$value_state = 0;
-								}
 
-								if ($value_state == 1) {
-									$checked = 'checked="checked"';
-								} else {
-									$checked = '';
-								}
+								$value_state = (array_key_exists($key, $es_post_types))?$es_post_types[$value]:0;
+								$checked = ($value_state == 1)?'checked="checked"':'';
 
 								// html structure
 								echo '<fieldset>
