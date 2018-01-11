@@ -228,16 +228,10 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $is_internal = true;
       }
 
-      $curl = curl_init();
-      curl_setopt($curl, CURLOPT_URL, $request['url']);
-      curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
-      curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-      curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($curl, CURLOPT_TIMEOUT, 10);
-      curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
+      $client = new GuzzleHttp\Client();
 
       // if a body is provided
-      if ($request['body']) {
+      if ( isset($request['body']) ) {
         // unwrap the post data from ajax call
         if (!$is_internal) {
           $body = urldecode(base64_decode($request['body']));
@@ -257,25 +251,15 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
           $body = str_replace($site_url, $opt_url, $body);
         }
 
-        // obtain string length
-        $length = strlen($body);
-
-        // curl options
-        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-          'Content-Type: application/json',
-          'Content-Length: ' . $length
-        ));
+        $response = $client->request($request['method'], $request['url'], [
+            'body' => $body
+        ]);
       } else {
-        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-          'Content-Type: application/json'
-        ));
+        $response = $client->request($request['method'], $request['url']);
       }
 
-      $results = curl_exec($curl);
-      curl_close($curl);
+      $body = $response->getBody();
+      $results = $body->getContents();
 
       if ($is_internal) {
         return json_decode($results);
