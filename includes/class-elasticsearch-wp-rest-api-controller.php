@@ -6,12 +6,16 @@ if ( !defined( 'ABSPATH' ) ) {
 
 if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
   class WP_ES_FEEDER_REST_Controller extends WP_REST_Controller {
+    private $plugin_name;
+    private $namespace;
+    private $resource;
+    private $type;
+
     public function __construct( $post_type ) {
       $this->plugin_name = 'wp-es-feeder';
       $this->namespace = 'elasticsearch/v1';
       $this->resource = ES_API_HELPER::get_post_type_label($post_type, 'name');
       $this->type = $post_type;
-      $this->index_name = get_option($this->plugin_name)['es_index'];
     }
 
     // _iip_index_post_to_cdp_option is meta data
@@ -168,7 +172,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       // if atachment return right away
       if ( $post->post_type == 'attachment' ) {
         $post_data = wp_prepare_attachment_for_js( $post->ID );
-        $post_data['site'] = $this -> index_name;
+        $post_data['site'] = $this->get_site();
         return rest_ensure_response( $post_data );
       }
 
@@ -179,7 +183,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       $post_data[ 'type' ] = $this->type;
 
-      $post_data['site'] = $this -> index_name;
+      $post_data['site'] = $this->get_site();
 
       if ( isset( $post->post_date ) ) {
         $post_data[ 'published' ] = get_the_date( 'c', $post->ID );
@@ -254,7 +258,20 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       }
       return $status;
     }
+
+    public function get_site() {
+      $opt = get_option( $this->plugin_name );
+      $url = $opt['es_wpdomain'];
+      $args = parse_url($url);
+      $host = $url;
+      if (array_key_exists('host', $args))
+        $host = $args['host'];
+      else
+        $host = str_ireplace('https://', '', str_ireplace('http://', '', $host));
+      return $host;
+    }
   }
+
 }
 
 /*

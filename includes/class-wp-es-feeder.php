@@ -4,6 +4,8 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     protected $loader;
     protected $plugin_name;
     protected $version;
+    public $proxy;
+    public $error;
 
     public function __construct() {
       $this->plugin_name = 'wp-es-feeder';
@@ -140,88 +142,34 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         return;
       }
 
-      // form elasticsearch search url to find existing record in elastic
-      $exists_url = $this->proxy.'/'
-        .$config[ 'es_index' ].'/'.$post->post_type
-        .'/_search?q=id:' . $post->ID;
-
       $options = array(
-        'url' => $exists_url,
-        'method' => 'GET'
-      );
-
-      $es_response = $this->es_request( $options );
-
-      if ( !$es_response ) {
-        error_log( print_r( $this->error . 'addOrUpdate() elasticsearch threw error', true ) );
-        return;
-      }
-
-      $existing_record_found = $es_response->hits->total;
-
-      // create new record in elastic if record doesn't exist
-      if ( (int)$existing_record_found == 0 ) {
-
-        $options = array(
-          'url' => $config[ 'es_url' ] . '/' . $post->post_type,
-          'method' => 'POST',
-          'body' => $api_response
-        );
-
-        $response = $this->es_request( $options );
-        if ( !$response ) {
-          error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
-        }
-        return; // end create
-      }
-
-      // update existing document
-      $_id   = $es_response->hits->hits[ 0 ]->_id;
-      $put_url = $config[ 'es_url' ] . '/' . $post->post_type . '/' . $_id;
-
-      $options = array(
-        'url' => $put_url,
-        'method' => 'PUT',
+        'url' => $config[ 'es_url' ] . '/' . $post->post_type,
+        'method' => 'POST',
         'body' => $api_response
       );
 
       $response = $this->es_request( $options );
       if ( !$response ) {
-        error_log( print_r( $this->error . 'addOrUpdate()[update] file_get_contents failed', true ) );
+        error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
       }
     }
 
     public function delete( $post ) {
       $opt = get_option( $this->plugin_name );
-      $exists_url = $opt[ 'es_url' ] . '/' . $post->post_type
-        . '/_search?q=id:' . $post->ID;
+
+      $uuid = $this->get_uuid($post);
+      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type . '/' . $uuid;
 
       $options = array(
-        'url' => $exists_url,
-        'method' => 'GET'
+         'url' => $delete_url,
+         'method' => 'DELETE'
       );
 
-      $es_response = $this->es_request( $options );
-      if ( !$es_response ) {
-        error_log( print_r( $this->error . 'delete() get request failed', true ) );
-        return;
-      }
-
-      $existing_record_found = $es_response->hits->total;
-      if ( (int)$existing_record_found == 1 ) {
-        $_id = $es_response->hits->hits[ 0 ]->_id;
-        $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type . '/' . $_id;
-
-        $options = array(
-           'url' => $delete_url,
-           'method' => 'DELETE'
-        );
-
-        $this->es_request( $options );
-      }
+      $this->es_request( $options );
     }
 
     public function es_request($request) {
+      $is_internal = false;
       if (!$request) {
         $request = $_POST['data'];
       } else {
@@ -282,6 +230,20 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       } else {
         return wp_send_json(json_decode($results));
       }
+    }
+
+    public function get_uuid($post) {
+      $opt = get_option( $this->plugin_name );
+      $url = $opt['es_wpdomain'];
+      $args = parse_url($url);
+      $host = $url;
+      if (array_key_exists('host', $args))
+        $host = $args['host'];
+      else
+        $host = str_ireplace('https://', '', str_ireplace('http://', '', $host));
+
+      $host = str_replace('.', '-', $host);
+      return "{$host}_{$post->ID}";
     }
   }
 }
