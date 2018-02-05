@@ -9,10 +9,10 @@
 
   function init() {
     testConnectionClick();
-    createIndexClick();
+    // createIndexClick();
     queryIndexClick();
-    deleteIndexClick();
-    reindexClick();
+    // deleteIndexClick();
+    // reindexClick();
   }
 
   function wpRequest(data) {
@@ -34,12 +34,12 @@
     });
   }
 
-  function createIndexClick() {
-    $('#es_create_index').on('click', function (e) {
-      if (!checkpoint()) return;
-      createIndexRequest();
-    });
-  }
+  // function createIndexClick() {
+  //   $('#es_create_index').on('click', function (e) {
+  //     if (!checkpoint()) return;
+  //     createIndexRequest();
+  //   });
+  // }
 
   function queryIndexClick() {
     $('#es_query_index').on('click', function (e) {
@@ -48,31 +48,31 @@
     });
   }
 
-  function deleteIndexClick() {
-    $('#es_delete_index').on('click', function (e) {
-      if (!checkpoint()) return;
+  // function deleteIndexClick() {
+  //   $('#es_delete_index').on('click', function (e) {
+  //     if (!checkpoint()) return;
+  //
+  //     var isConfirmed = confirm('Deleting an index removes all of the data stored in that index. Do you want to continue?');
+  //     if (!isConfirmed) {
+  //       return;
+  //     }
+  //
+  //     deleteIndexRequest();
+  //   });
+  // }
 
-      var isConfirmed = confirm('Deleting an index removes all of the data stored in that index. Do you want to continue?');
-      if (!isConfirmed) {
-        return;
-      }
-
-      deleteIndexRequest();
-    });
-  }
-
-  function reindexClick() {
-    $('#es_reindex').on('click', function (e) {
-      if (!checkpoint()) return;
-
-      deleteIndexRequest()
-        .then(function () {
-          createIndexRequest();
-        }).then(function () {
-          processRecords();
-        });
-    });
-  }
+  // function reindexClick() {
+  //   $('#es_reindex').on('click', function (e) {
+  //     if (!checkpoint()) return;
+  //
+  //     deleteIndexRequest()
+  //       .then(function () {
+  //         createIndexRequest();
+  //       }).then(function () {
+  //         processRecords();
+  //       });
+  //   });
+  // }
 
   function generatePostBody(method, url, elasticBody) {
     var options = {
@@ -112,39 +112,39 @@
       });
   }
 
-  function createIndexRequest() {
-    var opts = generatePostBody('PUT', settings.server + '/' + settings.index);
+  // function createIndexRequest() {
+  //   var opts = generatePostBody('PUT', settings.server + '/' + settings.index);
+  //
+  //   return wpRequest(opts)
+  //     .then(function (data) {
+  //       if (!data | data.error) {
+  //         var errorMessage = 'Index creation failed.';
+  //         jsonDisplay(
+  //           JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
+  //         );
+  //       }
+  //       else {
+  //         jsonDisplay(JSON.stringify(data, null, 2));
+  //       }
+  //     });
+  // }
 
-    return wpRequest(opts)
-      .then(function (data) {
-        if (!data | data.error) {
-          var errorMessage = 'Index creation failed.';
-          jsonDisplay(
-            JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
-          );
-        }
-        else {
-          jsonDisplay(JSON.stringify(data, null, 2));
-        }
-      });
-  }
-
-  function deleteIndexRequest() {
-    var opts = generatePostBody('DELETE', settings.server + '/' + settings.index);
-
-    return wpRequest(opts)
-      .then(function (data) {
-        if (!data | data.error) {
-          var errorMessage = 'Index deletion failed';
-          jsonDisplay(
-            JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
-          );
-        }
-        else {
-          jsonDisplay(JSON.stringify(data, null, 2));
-        }
-      });
-  }
+  // function deleteIndexRequest() {
+  //   var opts = generatePostBody('DELETE', settings.server + '/' + settings.index);
+  //
+  //   return wpRequest(opts)
+  //     .then(function (data) {
+  //       if (!data | data.error) {
+  //         var errorMessage = 'Index deletion failed';
+  //         jsonDisplay(
+  //           JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
+  //         );
+  //       }
+  //       else {
+  //         jsonDisplay(JSON.stringify(data, null, 2));
+  //       }
+  //     });
+  // }
 
   function processRecords() {
     $('.index-spinner').html(renderCounter());
@@ -152,7 +152,7 @@
     var postTypePromises = [];
     settings.postTypes.forEach(function (type) {
       postTypePromises.push(getPostTypeList(type));
-    })
+    });
 
     Promise.all(postTypePromises).then(function (isProcessing) {
       var isAllComplete = isProcessing.every(function (processing) {
@@ -213,10 +213,10 @@
   }
 
   function getCount() {
-    var opts = generatePostBody('GET', settings.server + '/' + settings.index + '/_count')
+    var opts = generatePostBody('POST', settings.server + '/search', {index: 'videos'});
 
     wpRequest(opts).then(function (data) {
-      let count = (typeof data.count === "undefined") ? 0 : data.count;
+      var count = (typeof data.count === "undefined") ? 0 : data.count;
       $('.index-spinner')
         .html('<span style="top: 10px; position: absolute;">' + count + ' records indexed.</span>');
       jsonDisplay(
@@ -227,9 +227,9 @@
 
   function checkpoint() {
     getSettings();
-    if (!isValidIndex()) {
-      return false;
-    }
+    // if (!isValidIndex()) {
+    //   return false;
+    // }
     return true;
   }
 
@@ -257,32 +257,32 @@
     $('#es_output').text(str);
   }
 
-  function notice(str) {
-    if (typeof str !== 'string') {
-      throw new Error('notice(): argument must be a string');
-    }
-    $('.wp_es_settings').prepend(str);
-  }
-
-  function noticeTimer() {
-    var timer = setTimeout(function () {
-      $('.notice').remove();
-      clearTimeout(timer);
-    }, 5000);
-  }
-
-  function isValidIndex() {
-    var validName = new RegExp('(^[a-z0-9_\.-]+$)', 'gi');
-
-    if (!settings.index || !validName.test(settings.index)) {
-      var errorMessage = 'Please supply a valid index name.';
-      notice('<div class="notice notice-error"><p>' + errorMessage + '</p></div>');
-      noticeTimer();
-      return false;
-    }
-
-    return true;
-  }
+  // function notice(str) {
+  //   if (typeof str !== 'string') {
+  //     throw new Error('notice(): argument must be a string');
+  //   }
+  //   $('.wp_es_settings').prepend(str);
+  // }
+  //
+  // function noticeTimer() {
+  //   var timer = setTimeout(function () {
+  //     $('.notice').remove();
+  //     clearTimeout(timer);
+  //   }, 5000);
+  // }
+  //
+  // function isValidIndex() {
+  //   var validName = new RegExp('(^[a-z0-9_\.-]+$)', 'gi');
+  //
+  //   if (!settings.index || !validName.test(settings.index)) {
+  //     var errorMessage = 'Please supply a valid index name.';
+  //     notice('<div class="notice notice-error"><p>' + errorMessage + '</p></div>');
+  //     noticeTimer();
+  //     return false;
+  //   }
+  //
+  //   return true;
+  // }
 
   function getSelectedPostTypes() {
     var types = [];
@@ -295,27 +295,26 @@
     return types;
   }
 
-  function getRegion() {
-    var server = $('#es_url').val();
-
-    if (server.indexOf('amazonaws.com') < 0) {
-      return '';
-    }
-
-    server = server.split('.');
-
-    if (server.length === 5) {
-      return server[1];
-    }
-
-    throw new Error('getRegion(): Not a properly formatted AWS URL');
-  }
+  // function getRegion() {
+  //   var server = $('#es_url').val();
+  //
+  //   if (server.indexOf('amazonaws.com') < 0) {
+  //     return '';
+  //   }
+  //
+  //   server = server.split('.');
+  //
+  //   if (server.length === 5) {
+  //     return server[1];
+  //   }
+  //
+  //   throw new Error('getRegion(): Not a properly formatted AWS URL');
+  // }
 
   function getSettings() {
     settings = {
       domain: $('#es_wpdomain').val(),
       server: $('#es_url').val(),
-      index: $('#es_index').val(),
       postTypes: getSelectedPostTypes(),
       auth: {
         enabled: $('#es_auth_required').is(':checked'),

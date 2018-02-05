@@ -178,7 +178,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       // We are also renaming the fields to more understandable names.
       if ( isset( $post->ID ) ) {
-        $post_data[ 'id' ] = (int) $post->ID;
+        $post_data[ 'post_id' ] = (int) $post->ID;
       }
 
       $post_data[ 'type' ] = $this->type;

@@ -71,8 +71,7 @@ class wp_es_feeder_Admin {
 
     $valid = array(
       'es_wpdomain' => sanitize_text_field( $input[ 'es_wpdomain' ] ),
-      'es_url' => sanitize_text_field( $input[ 'es_url' ] ),
-      'es_index' => sanitize_text_field( $input[ 'es_index' ] )
+      'es_url' => sanitize_text_field( $input[ 'es_url' ] )
     );
 
     $types = array();

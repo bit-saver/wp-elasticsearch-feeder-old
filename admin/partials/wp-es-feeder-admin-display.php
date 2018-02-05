@@ -12,7 +12,7 @@
  * @subpackage wp_es_feeder/admin/partials
  */
 
-  global $wpdb;
+  global $wpdb, $feeder;
 ?>
 
 <!-- This file should primarily consist of HTML with a little bit of PHP. -->
@@ -25,7 +25,6 @@
 
 			$es_wpdomain = $options['es_wpdomain']?$options['es_wpdomain']:null;
 			$es_url = $options['es_url']?$options['es_url']:null;
-			$es_index = $options['es_index']?$options['es_index']:null;
 			$es_post_types = $options['es_post_types']?$options['es_post_types']:null;
 
 			// Get domain(s) - support for Domain Mapping
@@ -35,19 +34,21 @@
 			$protocol = is_ssl() ? 'https://' : 'http://';
 
 			$selected = '';
-			if ( $site === $es_wpdomain || empty($es_wpdomain) ) 
+			if ( $site === $es_wpdomain || empty($es_wpdomain) )
 				$selected = 'selected';
-			
+
 			$domain_output = "<option value='$site' $selected>$site</option>";
 
 			if ( !empty($domains) ) {
 				foreach($domains as $domain) {
 					$selected = '';
-					if ( $protocol.$domain === $es_wpdomain ) 
+					if ( $protocol.$domain === $es_wpdomain )
 						$selected = 'selected';
 					$domain_output .= "<option value='$protocol$domain' $selected>$protocol$domain</option>";
 				}
 			}
+
+			$es_allowed_types = $feeder->es_request(array('url' => $options['es_url'] . '/types'));
 
 
     ?>
@@ -76,10 +77,10 @@
 							<!--<span class="description"><?php esc_attr_e( 'It must include the trailing slash "/"', 'wp_admin_style' ); ?></span><br>-->
 						</div>
 
-						<h2><span><?php esc_attr_e( 'Index Name', 'wp_admin_style' ); ?></span></h2>
-						<div class="inside">
-							<input type="text" placeholder="sitename.com" class="regular-text" id="es_index" name="<?php echo $this->plugin_name; ?>[es_index]" value="<?php if(!empty($es_index)) echo $es_index; ?>"/><br/>
-						</div>
+<!--						<h2><span>--><?php //esc_attr_e( 'Index Name', 'wp_admin_style' ); ?><!--</span></h2>-->
+<!--						<div class="inside">-->
+<!--							<input type="text" placeholder="sitename.com" class="regular-text" id="es_index" name="--><?php //echo $this->plugin_name; ?><!--[es_index]" value="--><?php //if(!empty($es_index)) echo $es_index; ?><!--"/><br/>-->
+<!--						</div>-->
 
 						<hr/>
 
@@ -89,7 +90,7 @@
 							<?php 
 							$post_types = get_post_types( array( 'public' => true ) );
 							foreach($post_types as $key => $value) {
-
+                                if (!in_array($key, $es_allowed_types)) continue;
 								$value_state = (array_key_exists($key, $es_post_types))?$es_post_types[$value]:0;
 								$checked = ($value_state == 1)?'checked="checked"':'';
 
@@ -110,10 +111,10 @@
 						<h2><span><?php esc_attr_e( 'Manage', 'wp_admin_style' ); ?></span></h2>
 						<div class="inside">
 							<input class="button-secondary" type="button" id="es_test_connection" name="es_test_connection" value="<?php esc_attr_e( 'Test Connection' ); ?>" />
-							<input class="button-secondary" type="button" id="es_create_index" name="es_create_index" value="<?php esc_attr_e( 'Create Index' ); ?>" />
+<!--							<input class="button-secondary" type="button" id="es_create_index" name="es_create_index" value="--><?php //esc_attr_e( 'Create Index' ); ?><!--" />-->
 							<input class="button-secondary" type="button" id="es_query_index" name="es_query_index" value="<?php esc_attr_e( 'Query Index' ); ?>" />
-							<input class="button-secondary" type="button" id="es_reindex" name="es_reindex" value="<?php esc_attr_e( 'Re-index Data' ); ?>" />
-							<input class="button-secondary" type="button" id="es_delete_index" name="es_delete_index" value="<?php esc_attr_e( 'Delete Index' ); ?>" />
+<!--							<input class="button-secondary" type="button" id="es_reindex" name="es_reindex" value="--><?php //esc_attr_e( 'Re-index Data' ); ?><!--" />-->
+<!--							<input class="button-secondary" type="button" id="es_delete_index" name="es_delete_index" value="--><?php //esc_attr_e( 'Delete Index' ); ?><!--" />-->
 						</div>
 
 						<div class="inside index-spinner"></div>
