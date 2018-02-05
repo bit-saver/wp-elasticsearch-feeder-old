@@ -163,7 +163,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       if ( (int)$existing_record_found == 0 ) {
 
         $options = array(
-          'url' => $config[ 'es_url' ] . '/' . $config[ 'es_index' ] . '/' . $post->post_type,
+          'url' => $config[ 'es_url' ] . '/' . $post->post_type,
           'method' => 'POST',
           'body' => $api_response
         );
@@ -177,7 +177,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       // update existing document
       $_id   = $es_response->hits->hits[ 0 ]->_id;
-      $put_url = $config[ 'es_url' ] . '/' . $config[ 'es_index' ] . '/' . $post->post_type . '/' . $_id;
+      $put_url = $config[ 'es_url' ] . '/' . $post->post_type . '/' . $_id;
 
       $options = array(
         'url' => $put_url,
@@ -193,7 +193,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     public function delete( $post ) {
       $opt = get_option( $this->plugin_name );
-      $exists_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type
+      $exists_url = $opt[ 'es_url' ] . '/' . $post->post_type
         . '/_search?q=id:' . $post->ID;
 
       $options = array(
@@ -210,7 +210,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $existing_record_found = $es_response->hits->total;
       if ( (int)$existing_record_found == 1 ) {
         $_id = $es_response->hits->hits[ 0 ]->_id;
-        $delete_url = $opt[ 'es_url' ] . '/' . $opt[ 'es_index' ] . '/' . $post->post_type . '/' . $_id;
+        $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type . '/' . $_id;
 
         $options = array(
            'url' => $delete_url,
