@@ -221,24 +221,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       }
     }
 
-    public function es_request($request) {
-      if (!$request) {
-        $request = $_POST['data'];
-      } else {
-        $is_internal = true;
-      }
-
-      $client = new GuzzleHttp\Client();
-
-      // if a body is provided
-      if ( isset($request['body']) ) {
-        // unwrap the post data from ajax call
-        if (!$is_internal) {
-          $body = urldecode(base64_decode($request['body']));
-        } else {
-          $body = json_encode($request['body']);
-        }
-
+    private function is_domain_mapped( $body ) {
         // check if domain is mapped
         $opt = get_option( $this->plugin_name );
         $protocol = is_ssl() ? 'https://' : 'http://';
@@ -251,16 +234,54 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
           $body = str_replace($site_url, $opt_url, $body);
         }
 
-        $response = $client->request($request['method'], $request['url'], [
-            'body' => $body
-        ]);
+        return $body;
+    }
+
+    public function es_request($request) {
+      if (!$request) {
+        $request = $_POST['data'];
       } else {
-        $response = $client->request($request['method'], $request['url']);
+        $is_internal = true;
+      }
+
+      $client = new GuzzleHttp\Client();
+
+      try {
+        $client->get($request['url'], ['http_errors' => false]);
+      } catch (GuzzleHttp\Exception\ConnectException $e) {
+        $error = $e->getMessage();
+        die($error);
+      }
+
+      // if a body is provided
+      if ( isset($request['body']) ) {
+        // unwrap the post data from ajax call
+        if (!$is_internal) {
+          $body = urldecode(base64_decode($request['body']));
+        } else {
+          $body = json_encode($request['body']);
+        }
+
+        $body = $this->is_domain_mapped($body);
+
+        try {
+          $response = $client->request($request['method'], $request['url'], [
+              'body' => $body
+          ]);
+        } catch (GuzzleHttp\Exception\ConnectException $e) {
+          $error = $e->getMessage();
+        }
+      } else {
+        try {
+          $response = $client->request($request['method'], $request['url'], ['http_errors' => false]);
+        } catch (GuzzleHttp\Exception\ConnectException $e) {
+          $error = $e->getMessage();
+        }
       }
 
       $body = $response->getBody();
       $results = $body->getContents();
-
+  
       if ($is_internal) {
         return json_decode($results);
       } else {
