@@ -6,10 +6,10 @@ if ( !defined( 'ABSPATH' ) ) {
 
 if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
   class WP_ES_FEEDER_REST_Controller extends WP_REST_Controller {
-    private $plugin_name;
-    private $namespace;
-    private $resource;
-    private $type;
+    public $plugin_name;
+    public $namespace;
+    public $resource;
+    public $type;
 
     public function __construct( $post_type ) {
       $this->plugin_name = 'wp-es-feeder';
