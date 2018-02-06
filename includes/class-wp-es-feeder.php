@@ -52,6 +52,10 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );
       add_action( 'trash_post', array( &$this, 'delete_post' ) );
       add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
+      add_action( 'wp_ajax_es_sync_status', array($this, 'get_sync_status') );
+      add_action( 'wp_ajax_es_post_ids', array($this, 'get_post_ids') );
+      add_action( 'wp_ajax_es_initiate_sync', array($this, 'es_initiate_sync') );
+      add_action( 'wp_ajax_es_process_next', array($this, 'es_process_next') );
     }
 
     public function run() {
@@ -72,6 +76,70 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     public function get_proxy_server() {
       return $this->proxy;
+    }
+
+    public function get_sync_status() {
+      $post_id = $_POST['post_id'];
+      $status = get_post_meta($post_id, '_cdp_sync_status', true) ?: 'Never synced';
+      echo $status;
+      exit;
+    }
+
+    public function get_post_ids() {
+      global $wpdb;
+      $opts = get_option( $this->plugin_name );
+      $post_types = $opts[ 'es_post_types' ];
+      $formats = implode(',', array_fill(0, count($post_types), '%s'));
+      $query = "SELECT p.ID FROM $wpdb->posts p 
+                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m
+                    ON p.ID = m.post_id 
+                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND m.meta_value != 'no'";
+      $query = $wpdb->prepare($query, array_keys($post_types));
+      echo json_encode($wpdb->get_col($query));
+      exit;
+    }
+
+    public function es_initiate_sync() {
+      global $wpdb;
+      $wpdb->delete($wpdb->postmeta, array('meta_value' => '_cdp_sync_queue'));
+      $opts = get_option( $this->plugin_name );
+      $post_types = $opts[ 'es_post_types' ];
+      $formats = implode(',', array_fill(0, count($post_types), '%s'));
+      $query = "SELECT p.ID FROM $wpdb->posts p 
+                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m
+                    ON p.ID = m.post_id 
+                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND m.meta_value != 'no'";
+      $query = $wpdb->prepare($query, array_keys($post_types));
+      $post_ids = $wpdb->get_col($query);
+      if (!count($post_ids)) {
+        echo json_encode(array('error' => true, 'message' => 'No posts found.', 'query' => $query));
+        exit;
+      }
+      foreach ($post_ids as $post_id)
+        update_post_meta($post_id, '_cdp_sync_queue', 1);
+      $this->es_process_next();
+    }
+
+    public function es_process_next() {
+      global $wpdb;
+      $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue' AND meta_value = 1";
+      $post_id = $wpdb->get_var($query);
+      if (!$post_id) {
+        $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
+        $row = $wpdb->get_row($query);
+        $total = $row->total;
+        $complete = $row->total - $row->incomplete;
+        $wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_queue'));
+        echo json_encode(array('done' => 1, 'total' => $total, 'completed' => $complete));
+        exit;
+      }
+      update_post_meta($post_id, '_cdp_sync_queue', "0");
+      $post = get_post($post_id);
+      $resp = $this->addOrUpdate($post, false);
+      $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
+      $row = $wpdb->get_row($query);
+      echo json_encode(array('done' => 0, 'response' => $resp, 'total' => $row->total, 'completed' => $row->total - $row->incomplete));
+      exit;
     }
 
     public function save_post( $id, $post ) {
@@ -125,7 +193,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $this->delete( $post );
     }
 
-    public function addOrUpdate( $post ) {
+    public function addOrUpdate( $post, $print = true ) {
       // plural form of post type
       $post_type_name = ES_API_HELPER::get_post_type_label( $post->post_type, 'name' );
       // settings and configuration for plugin
@@ -142,16 +210,29 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         return;
       }
 
+      // create callback for this post
+      global $wpdb;
+      do {
+        $uid = uniqid();
+        $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_uid' AND meta_value = $uid";
+      } while ($wpdb->get_var($query));
+      $callback = plugin_dir_url(dirname(__FILE__)) . 'callback.php?uid=' . $uid;
+      update_post_meta($post->ID, '_cdp_sync_uid', $uid);
+      update_post_meta($post->ID, '_cdp_sync_status', 'Syncing');
+
       $options = array(
         'url' => $config[ 'es_url' ] . '/' . $post->post_type,
         'method' => 'POST',
-        'body' => $api_response
+        'body' => $api_response,
+        'print' => $print
       );
 
-      $response = $this->es_request( $options );
+      $response = $this->es_request( $options, $callback );
       if ( !$response ) {
         error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
       }
+
+      return $response;
     }
 
     public function delete( $post ) {
@@ -168,7 +249,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $this->es_request( $options );
     }
 
-    public function es_request($request) {
+    public function es_request($request, $callback = null) {
       $is_internal = false;
       if (!$request) {
         $request = $_POST['data'];
@@ -183,6 +264,8 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
       curl_setopt($curl, CURLOPT_TIMEOUT, 10);
       curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
+      $headers = array('Content-Type: application/json');
+      if ($callback) $headers[] = "callback: $callback";
 
       // if a body is provided
       if ($request['body']) {
@@ -207,28 +290,25 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
         // obtain string length
         $length = strlen($body);
+        $headers[] = 'Content-Length: ' . $length;
 
         // curl options
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-          'Content-Type: application/json',
-          'Content-Length: ' . $length
-        ));
+        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
       } else {
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-          'Content-Type: application/json'
-        ));
+        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
       }
 
       $results = curl_exec($curl);
       curl_close($curl);
 
-      if ($is_internal) {
+      if ($is_internal || (isset($request['print']) && !$request['print'])) {
         return json_decode($results);
       } else {
-        return wp_send_json(json_decode($results));
+        wp_send_json(json_decode($results));
+        return null;
       }
     }
 

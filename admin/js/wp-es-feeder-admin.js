@@ -1,6 +1,9 @@
 (function ($) {
   'use strict';
   var settings = {};
+  var queue = [];
+  var completed = 0;
+  var total = 0;
 
   $(window).load(function () {
     init();
@@ -12,7 +15,7 @@
     // createIndexClick();
     queryIndexClick();
     // deleteIndexClick();
-    // reindexClick();
+    reindexClick();
   }
 
   function wpRequest(data) {
@@ -61,18 +64,68 @@
   //   });
   // }
 
-  // function reindexClick() {
-  //   $('#es_reindex').on('click', function (e) {
-  //     if (!checkpoint()) return;
-  //
-  //     deleteIndexRequest()
-  //       .then(function () {
-  //         createIndexRequest();
-  //       }).then(function () {
-  //         processRecords();
-  //       });
-  //   });
-  // }
+  function reindexClick() {
+    $('#es_reindex').on('click', function (e) {
+      // if (!checkpoint()) return;
+      //
+      // deleteIndexRequest()
+      //   .then(function () {
+      //     createIndexRequest();
+      //   }).then(function () {
+      //     processRecords();
+      //   });
+
+      $('.index-spinner').html(renderCounter());
+
+      $.ajax({
+        url: ajaxurl,
+        type: 'POST',
+        dataType: 'JSON',
+        data: {
+          action: 'es_initiate_sync'
+        },
+        success: function (result) {
+          console.log(result);
+          if (result.error) {
+            $('.index-spinner').empty();
+          } else {
+            completed = result.completed;
+            total = result.total;
+            processQueue();
+          }
+        },
+        error: function (result) {
+          console.error(result);
+          $('.index-spinner').empty();
+        }
+      });
+    });
+  }
+
+  function processQueue() {
+    $('.index-spinner .count').html(completed + ' / ' + total);
+    $.ajax({
+      type: 'POST',
+      dataType: 'JSON',
+      url: ajaxurl,
+      data: {
+        action: 'es_process_next'
+      },
+      success: function (result) {
+        console.log(result);
+        if (result.error || result.done) {
+          $('.index-spinner').empty();
+        } else {
+          completed = result.completed;
+          total = result.total;
+          processQueue();
+        }
+      },
+      error: function (result) {
+        console.error(result);
+      }
+    });
+  }
 
   function generatePostBody(method, url, elasticBody) {
     var options = {
@@ -235,7 +288,7 @@
 
   function renderCounter() {
     var html = '<div class="spinner is-active spinner-animation">';
-    html += 'Processing... Do not leave this page.';
+    html += 'Processing... Do not leave this page. <span class="count"></span>';
     html += '</div>';
     return html;
   }

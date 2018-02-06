@@ -84,6 +84,7 @@ class wp_es_feeder_Admin {
     } else {
 
       foreach ( $post_types as $key => $value ) {
+        if (!isset( $input[ 'es_post_type_' . $value ] ) || !$input[ 'es_post_type_' . $value ] ) continue;
         $types[ $value ] = ( isset( $input[ 'es_post_type_' . $value ] ) ) ? 1 : 0;
       }
 

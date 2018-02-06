@@ -113,7 +113,7 @@
 							<input class="button-secondary" type="button" id="es_test_connection" name="es_test_connection" value="<?php esc_attr_e( 'Test Connection' ); ?>" />
 <!--							<input class="button-secondary" type="button" id="es_create_index" name="es_create_index" value="--><?php //esc_attr_e( 'Create Index' ); ?><!--" />-->
 							<input class="button-secondary" type="button" id="es_query_index" name="es_query_index" value="<?php esc_attr_e( 'Query Index' ); ?>" />
-<!--							<input class="button-secondary" type="button" id="es_reindex" name="es_reindex" value="--><?php //esc_attr_e( 'Re-index Data' ); ?><!--" />-->
+							<input class="button-secondary" type="button" id="es_reindex" name="es_reindex" value="<?php esc_attr_e( 'Re-index Data' ); ?>" />
 <!--							<input class="button-secondary" type="button" id="es_delete_index" name="es_delete_index" value="--><?php //esc_attr_e( 'Delete Index' ); ?><!--" />-->
 						</div>
 
