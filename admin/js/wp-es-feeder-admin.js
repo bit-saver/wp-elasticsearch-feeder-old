@@ -1,9 +1,9 @@
 (function ($) {
   'use strict';
   var settings = {};
-  var queue = [];
   var completed = 0;
   var total = 0;
+  var current = null;
 
   $(window).load(function () {
     init();
@@ -75,7 +75,7 @@
       //     processRecords();
       //   });
 
-      $('.index-spinner').html(renderCounter());
+      createProgress();
 
       $.ajax({
         url: ajaxurl,
@@ -87,23 +87,24 @@
         success: function (result) {
           console.log(result);
           if (result.error) {
-            $('.index-spinner').empty();
+            clearProgress();
           } else {
             completed = result.completed;
             total = result.total;
+            current = result.response.req;
             processQueue();
           }
         },
         error: function (result) {
           console.error(result);
-          $('.index-spinner').empty();
+          clearProgress();
         }
       });
     });
   }
 
   function processQueue() {
-    $('.index-spinner .count').html(completed + ' / ' + total);
+    updateProgress();
     $.ajax({
       type: 'POST',
       dataType: 'JSON',
@@ -114,10 +115,11 @@
       success: function (result) {
         console.log(result);
         if (result.error || result.done) {
-          $('.index-spinner').empty();
+          clearProgress();
         } else {
           completed = result.completed;
           total = result.total;
+          current = result.response.req;
           processQueue();
         }
       },
@@ -125,6 +127,22 @@
         console.error(result);
       }
     });
+  }
+
+  function createProgress() {
+    $('.index-spinner').html(renderCounter());
+    $('.progress-wrapper').html('<div id="progress-bar"><span></span></div>');
+  }
+
+  function updateProgress() {
+    $('.index-spinner .count').html(completed + ' / ' + total);
+    $('#progress-bar span').animate({'width': (completed / total * 100) + '%'});
+    $('.current-post').html('Indexing post: ' + (current.title ? current.title : current.type + ' post #' + current.post_id));
+  }
+
+  function clearProgress() {
+    $('.index-spinner').empty();
+    $('.progress-wrapper').empty();
   }
 
   function generatePostBody(method, url, elasticBody) {
@@ -288,7 +306,7 @@
 
   function renderCounter() {
     var html = '<div class="spinner is-active spinner-animation">';
-    html += 'Processing... Do not leave this page. <span class="count"></span>';
+    html += 'Processing... Do not leave this page. <span class="count"></span> <span class="current-post"></span>';
     html += '</div>';
     return html;
   }

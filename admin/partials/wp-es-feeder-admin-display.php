@@ -118,6 +118,7 @@
 						</div>
 
 						<div class="inside index-spinner"></div>
+                        <div class="inside progress-wrapper"></div>
 						<hr/>
 
 						<div class="inside">
