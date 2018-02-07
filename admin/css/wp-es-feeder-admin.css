@@ -39,6 +39,10 @@
      width: 1%;
  }
 
+ #progress-bar.paused > span {
+     background-color: #e7bf22;
+ }
+
  #progress-bar > span:after {
      content: "";
      position: absolute;

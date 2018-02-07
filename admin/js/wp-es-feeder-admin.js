@@ -4,6 +4,7 @@
   var completed = 0;
   var total = 0;
   var current = null;
+  var paused = false;
 
   $(window).load(function () {
     init();
@@ -129,20 +130,26 @@
     });
   }
 
+  function pauseProgress() {
+    $('#es_reindex').val('Resume Sync');
+  }
+
   function createProgress() {
     $('.index-spinner').html(renderCounter());
     $('.progress-wrapper').html('<div id="progress-bar"><span></span></div>');
+    $('#es_reindex').val('Pause Sync');
   }
 
   function updateProgress() {
     $('.index-spinner .count').html(completed + ' / ' + total);
     $('#progress-bar span').animate({'width': (completed / total * 100) + '%'});
-    $('.current-post').html('Indexing post: ' + (current.title ? current.title : current.type + ' post #' + current.post_id));
+    $('.current-post').html((current ? 'Indexing post: ' + (current.title ? current.title : current.type + ' post #' + current.post_id) : ''));
   }
 
   function clearProgress() {
     $('.index-spinner').empty();
     $('.progress-wrapper').empty();
+    $('#es_reindex').val('Re-sync Data');
   }
 
   function generatePostBody(method, url, elasticBody) {

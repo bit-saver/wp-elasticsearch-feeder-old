@@ -130,7 +130,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $total = $row->total;
         $complete = $row->total - $row->incomplete;
         $wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_queue'));
-        echo json_encode(array('done' => 1, 'total' => $total, 'completed' => $complete));
+        echo json_encode(array('done' => 1, 'total' => $total, 'complete' => $complete));
         exit;
       }
       update_post_meta($post_id, '_cdp_sync_queue', "0");
@@ -138,7 +138,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $resp = $this->addOrUpdate($post, false);
       $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
       $row = $wpdb->get_row($query);
-      echo json_encode(array('done' => 0, 'response' => $resp, 'total' => $row->total, 'completed' => $row->total - $row->incomplete));
+      echo json_encode(array('done' => 0, 'response' => $resp, 'total' => $row->total, 'complete' => $row->total - $row->incomplete));
       exit;
     }
 

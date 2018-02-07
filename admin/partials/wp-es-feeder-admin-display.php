@@ -75,7 +75,7 @@
 						<div class="inside">
 							<input type="text" placeholder="http://localhost:9200/" class="regular-text" id="es_url" name="<?php echo $this->plugin_name; ?>[es_url]" value="<?php if(!empty($es_url)) echo $es_url; ?>"/>
 							<!--<span class="description"><?php esc_attr_e( 'It must include the trailing slash "/"', 'wp_admin_style' ); ?></span><br>-->
-						</div>
+		    				</div>
 
 <!--						<h2><span>--><?php //esc_attr_e( 'Index Name', 'wp_admin_style' ); ?><!--</span></h2>-->
 <!--						<div class="inside">-->
@@ -109,11 +109,12 @@
 						<hr/>
 
 						<h2><span><?php esc_attr_e( 'Manage', 'wp_admin_style' ); ?></span></h2>
-						<div class="inside">
-							<input class="button-secondary" type="button" id="es_test_connection" name="es_test_connection" value="<?php esc_attr_e( 'Test Connection' ); ?>" />
+						<div class="inside manage-btns">
+                            <button class="button-secondary" type="button" id="es_test_connection" name="es_test_connection"><?php esc_attr_e( 'Test Connection' ); ?></button>
 <!--							<input class="button-secondary" type="button" id="es_create_index" name="es_create_index" value="--><?php //esc_attr_e( 'Create Index' ); ?><!--" />-->
-							<input class="button-secondary" type="button" id="es_query_index" name="es_query_index" value="<?php esc_attr_e( 'Query Index' ); ?>" />
-							<input class="button-secondary" type="button" id="es_reindex" name="es_reindex" value="<?php esc_attr_e( 'Re-index Data' ); ?>" />
+                            <button class="button-secondary" type="button" id="es_query_index" name="es_query_index"><?php esc_attr_e( 'Query Index' ); ?></button>
+                            <button class="button-secondary" type="button" id="es_resync" name="es_reindex"><?php esc_attr_e( 'Re-sync Data' ); ?></button>
+                            <button class="button-primary" type="button" id="es_resync_control" name="es_resync_control" style="display: none;">Pause</button>
 <!--							<input class="button-secondary" type="button" id="es_delete_index" name="es_delete_index" value="--><?php //esc_attr_e( 'Delete Index' ); ?><!--" />-->
 						</div>
 
