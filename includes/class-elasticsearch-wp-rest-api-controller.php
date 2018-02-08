@@ -14,58 +14,58 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     public function __construct( $post_type ) {
       $this->plugin_name = 'wp-es-feeder';
       $this->namespace = 'elasticsearch/v1';
-      $this->resource = ES_API_HELPER::get_post_type_label($post_type, 'name');
+      $this->resource = ES_API_HELPER::get_post_type_label( $post_type, 'name' );
       $this->type = $post_type;
     }
 
     // _iip_index_post_to_cdp_option is meta data
     public function shouldIndex( $post ) {
-      return ES_API_HELPER::get_index_to_cdp($post->ID);
+      return ES_API_HELPER::get_index_to_cdp( $post->ID );
     }
 
     public function register_routes() {
-      register_rest_route( $this->namespace, '/' . rawurlencode($this->resource), array(
-         array(
-           'methods' => WP_REST_Server::READABLE,
+      register_rest_route( $this->namespace, '/' . rawurlencode( $this->resource ), array(
+        array(
+          'methods' => WP_REST_Server::READABLE,
           'callback' => array(
-             $this,
+            $this,
             'get_items'
           ),
           'args' => array(
-             'per_page' => array(
-               'validate_callback' => function( $param, $request, $key ) {
+            'per_page' => array(
+              'validate_callback' => function ( $param, $request, $key ) {
                 return is_numeric( $param );
               }
             ),
             'page' => array(
-               'validate_callback' => function( $param, $request, $key ) {
+              'validate_callback' => function ( $param, $request, $key ) {
                 return is_numeric( $param );
               }
             )
           ),
           'permission_callback' => array(
-             $this,
+            $this,
             'get_items_permissions_check'
           )
         )
       ) );
 
-      register_rest_route( $this->namespace, '/' . rawurlencode($this->resource) . '/(?P<id>[\d]+)', array(
-         array(
+      register_rest_route( $this->namespace, '/' . rawurlencode( $this->resource ) . '/(?P<id>[\d]+)', array(
+        array(
           'methods' => WP_REST_Server::READABLE,
           'callback' => array(
-             $this,
+            $this,
             'get_item'
           ),
           'args' => array(
-             'id' => array(
-               'validate_callback' => function( $param, $request, $key ) {
+            'id' => array(
+              'validate_callback' => function ( $param, $request, $key ) {
                 return is_numeric( $param );
               }
             )
           ),
           'permission_callback' => array(
-             $this,
+            $this,
             'get_item_permissions_check'
           )
         )
@@ -74,8 +74,8 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
     public function get_items( $request ) {
       $args[ 'post_type' ] = $this->type;
-      $page = (int) $request->get_param( 'page' );
-      $per_page = (int) $request->get_param( 'per_page' );
+      $page = (int)$request->get_param( 'page' );
+      $per_page = (int)$request->get_param( 'per_page' );
 
       if ( $per_page ) {
         $args[ 'posts_per_page' ] = $per_page;
@@ -87,19 +87,19 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         if ( $page == 1 ) {
           $args[ 'offset' ] = 0;
         } elseif ( $page > 1 ) {
-          $args[ 'offset' ] = ( $page * $args[ 'posts_per_page' ] ) - $args[ 'posts_per_page' ];
+          $args[ 'offset' ] = ($page * $args[ 'posts_per_page' ]) - $args[ 'posts_per_page' ];
         }
       }
 
-      $args['meta_query'] = array(
+      $args[ 'meta_query' ] = array(
         'relation' => 'OR',
         array(
-          'key'     => '_iip_index_post_to_cdp_option',
+          'key' => '_iip_index_post_to_cdp_option',
           'compare' => 'NOT EXISTS'
         ),
         array(
-          'key'     => '_iip_index_post_to_cdp_option',
-          'value'   => 'no',
+          'key' => '_iip_index_post_to_cdp_option',
+          'value' => 'no',
           'compare' => '!='
         ),
       );
@@ -115,20 +115,20 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         $data[] = $this->prepare_response_for_collection( $response );
       }
 
-      return rest_ensure_response($data);
+      return rest_ensure_response( $data );
     }
 
     public function get_item( $request ) {
-      $id = (int) $request[ 'id' ];
+      $id = (int)$request[ 'id' ];
       $response = array();
 
       $post = get_post( $id );
 
       if ( empty( $post ) ) {
-        return rest_ensure_response( array ());
+        return rest_ensure_response( array() );
       }
 
-      if( $this->shouldIndex($post) ) {
+      if ( $this->shouldIndex( $post ) ) {
         $response = $this->prepare_item_for_response( $post, $request );
       }
 
@@ -136,21 +136,21 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     }
 
     public function prepare_response_for_collection( $response ) {
-      if ( !( $response instanceof WP_REST_Response ) ) {
+      if ( !($response instanceof WP_REST_Response) ) {
         return $response;
       }
 
-      $data   = (array) $response->get_data();
+      $data = (array)$response->get_data();
       $server = rest_get_server();
 
       if ( method_exists( $server, 'get_compact_response_links' ) ) {
         $links = call_user_func( array(
-           $server,
+          $server,
           'get_compact_response_links'
         ), $response );
       } else {
         $links = call_user_func( array(
-           $server,
+          $server,
           'get_response_links'
         ), $response );
       }
@@ -172,18 +172,18 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       // if atachment return right away
       if ( $post->post_type == 'attachment' ) {
         $post_data = wp_prepare_attachment_for_js( $post->ID );
-        $post_data['site'] = $this->get_site();
+        $post_data[ 'site' ] = $this->get_site();
         return rest_ensure_response( $post_data );
       }
 
       // We are also renaming the fields to more understandable names.
       if ( isset( $post->ID ) ) {
-        $post_data[ 'post_id' ] = (int) $post->ID;
+        $post_data[ 'post_id' ] = (int)$post->ID;
       }
 
       $post_data[ 'type' ] = $this->type;
 
-      $post_data['site'] = $this->get_site();
+      $post_data[ 'site' ] = $this->get_site();
 
       if ( isset( $post->post_date ) ) {
         $post_data[ 'published' ] = get_the_date( 'c', $post->ID );
@@ -199,8 +199,8 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       // pre-approved
       $opt = get_option( $this->plugin_name );
-      $opt_url = $opt['es_wpdomain'];
-      $post_data[ 'link' ] = str_replace(site_url(), $opt_url, get_permalink( $post->ID ));
+      $opt_url = $opt[ 'es_wpdomain' ];
+      $post_data[ 'link' ] = str_replace( site_url(), $opt_url, get_permalink( $post->ID ) );
 
       if ( isset( $post->post_title ) ) {
         $post_data[ 'title' ] = $post->post_title;
@@ -224,20 +224,20 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       $post_data[ 'tags' ] = ES_API_HELPER::get_tags( $post->ID );
       // $post_data[ 'tags.searchable' ] = ES_API_HELPER::get_tags_searchable( $post->ID );
       $post_data[ 'language' ] = ES_API_HELPER::get_language( $post->ID );
-      $post_data[ 'translations' ] = ES_API_HELPER::get_related_translated_posts($post->ID, $post->post_type);
-      
-      $custom_taxonomies = ES_API_HELPER::get_custom_taxonomies($post->ID);
-      if( count( $custom_taxonomies) ) {
+      $post_data[ 'translations' ] = ES_API_HELPER::get_related_translated_posts( $post->ID, $post->post_type );
+
+      $custom_taxonomies = ES_API_HELPER::get_custom_taxonomies( $post->ID );
+      if ( count( $custom_taxonomies ) ) {
         $post_data[ 'taxonomies' ] = $custom_taxonomies;
       }
-      
+
       $feature_image_exists = has_post_thumbnail( $post->ID );
       if ( $feature_image_exists ) {
         $post_data[ 'featured_image' ] = ES_API_HELPER::get_featured_image( get_post_thumbnail_id( $post->ID ) );
       }
 
       if ( isset( $post->comment_count ) ) {
-        $post_data[ 'comment_count' ] = (int) $post->comment_count;
+        $post_data[ 'comment_count' ] = (int)$post->comment_count;
       }
 
       return $post_data;
@@ -261,13 +261,13 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
     public function get_site() {
       $opt = get_option( $this->plugin_name );
-      $url = $opt['es_wpdomain'];
-      $args = parse_url($url);
+      $url = $opt[ 'es_wpdomain' ];
+      $args = parse_url( $url );
       $host = $url;
-      if (array_key_exists('host', $args))
-        $host = $args['host'];
+      if ( array_key_exists( 'host', $args ) )
+        $host = $args[ 'host' ];
       else
-        $host = str_ireplace('https://', '', str_ireplace('http://', '', $host));
+        $host = str_ireplace( 'https://', '', str_ireplace( 'http://', '', $host ) );
       return $host;
     }
   }
@@ -279,19 +279,19 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 * the class convention "WP_ES_FEEDER_EXT_{TYPE}_Controller" if you want to customize the output
 * If no class convention is found, plugin will create default API routes for custom post types
 */
-function register_post_types($type) {
+function register_post_types( $type ) {
   $base_types = array(
     'post' => true,
     'page' => true,
     'attachment' => true
   );
 
-  $is_base_type = array_key_exists( $type, $base_types);
-  if ((int) $is_base_type ) {
+  $is_base_type = array_key_exists( $type, $base_types );
+  if ( (int)$is_base_type ) {
     $controller = new WP_ES_FEEDER_REST_Controller( $type );
     $controller->register_routes();
     return;
-  } else if(!$is_base_type && !class_exists('WP_ES_FEEDER_EXT_'.strtoupper($type).'_Controller')) {
+  } else if ( !$is_base_type && !class_exists( 'WP_ES_FEEDER_EXT_' . strtoupper( $type ) . '_Controller' ) ) {
     $controller = new WP_ES_FEEDER_REST_Controller( $type );
     $controller->register_routes();
     return;
@@ -300,12 +300,12 @@ function register_post_types($type) {
 
 function register_elasticsearch_rest_routes() {
   $post_types = get_post_types( array(
-     'public' => true
-  ));
+    'public' => true
+  ) );
 
   if ( is_array( $post_types ) && count( $post_types ) > 0 ) {
     foreach ( $post_types as $type ) {
-      register_post_types($type);
+      register_post_types( $type );
     }
   }
 }
