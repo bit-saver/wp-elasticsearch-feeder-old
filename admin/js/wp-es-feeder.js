@@ -1,5 +1,6 @@
 'use strict';
 (function($) {
+  // sync object contains data related to the current (if any) resync
   var sync = {
     total: 0,
     complete: 0,
@@ -7,11 +8,16 @@
     paused: false
   };
 
+  /**
+   * Register click listener functions, load sync data from the injected variable, and
+   * update sync state if a sync was in progress.
+   */
   $(window).load(function() {
     $('#es_test_connection').on('click', testConnection);
     $('#es_query_index').on('click', queryIndex);
     $('#es_resync').on('click', resyncStart);
     $('#es_resync_control').on('click', resyncControl);
+
     console.log(es_feeder_sync);
     sync.total = parseInt(es_feeder_sync.total);
     sync.complete = parseInt(es_feeder_sync.complete);
@@ -22,6 +28,9 @@
     }
   });
 
+  /**
+   * Send a basic request to the provided URL and print the response in the output container.
+   */
   function testConnection() {
     $('#es_output').text('');
     disableManage();
@@ -45,10 +54,17 @@
     }).always(enableManage);
   }
 
+  /**
+   * Execute an arbitrary query against the API.
+   */
   function queryIndex() {
     // TODO: Add query handler to house a query test of some kind.
   }
 
+  /**
+   * TODO: Initiate a new sync by deleting ALL of this site's posts from ES
+   * Clear out old sync post meta (if any) and initiate a new sync process.
+   */
   function resyncStart() {
     sync = {
       total: 0,
@@ -75,6 +91,9 @@
     });
   }
 
+  /**
+   * Pause or resume the current sync process and update the UI accordingly.
+   */
   function resyncControl() {
     if (sync.paused) {
       $('#es_resync_control').html('Pause Sync');
@@ -90,6 +109,10 @@
     }
   }
 
+  /**
+   * Trigger backend processing of the next available Post in the sync queue
+   * and relay the results to the result handler function.
+   */
   function processQueue() {
     if (sync.paused) return;
     $.ajax({
@@ -108,6 +131,12 @@
     });
   }
 
+  /**
+   * Store result data in the local variable and update the state and progress bar,
+   * and spew the raw result into the output container.
+   *
+   * @param result
+   */
   function handleQueueResult(result) {
     if (result.error || result.done) {
       clearProgress();
@@ -121,6 +150,9 @@
     $('#es_output').text(JSON.stringify(result, null, 2));
   }
 
+  /**
+   * Add relevant markup for the progress bar and state UI/UX.
+   */
   function createProgress() {
     var html = '<div class="spinner is-active spinner-animation">';
     html += '<span class="spinner-text">' + (sync.paused ? 'Paused.' : 'Processing... Do not leave this page.') + '</span> <span class="count"></span> <span class="current-post"></span>';
@@ -130,22 +162,34 @@
     $('#es_resync_control').html(sync.paused ? 'Resume Sync' : 'Pause Sync').show();
   }
 
+  /**
+   * Update the pgoress bar and state UI using the local sync variable.
+   */
   function updateProgress() {
     $('.index-spinner .count').html(sync.complete + ' / ' + sync.total);
     $('#progress-bar span').animate({'width': (sync.complete / sync.total * 100) + '%'});
     $('.current-post').html((sync.post ? 'Indexing post: ' + (sync.post.title ? sync.post.title : sync.post.type + ' post #' + sync.post.post_id) : ''));
   }
 
+  /**
+   * Remove progress bar and state UI.
+   */
   function clearProgress() {
     $('.index-spinner').empty();
     $('.progress-wrapper').empty();
     $('#es_resync_control').hide();
   }
 
+  /**
+   * Disable the manage buttons.
+   */
   function disableManage() {
     $('.inside.manage-btns button').attr('disabled', true);
   }
 
+  /**
+   * Enable the manage buttons.
+   */
   function enableManage() {
     $('.inside.manage-btns button').attr('disabled', null);
   }

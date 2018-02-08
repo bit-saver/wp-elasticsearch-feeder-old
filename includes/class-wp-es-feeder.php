@@ -99,6 +99,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       exit;
     }
 
+    /**
+     * Triggered via AJAX, clears out old sync data and initiates a new sync process.
+     */
     public function es_initiate_sync() {
       global $wpdb;
       $wpdb->delete($wpdb->postmeta, array('meta_value' => '_cdp_sync_queue'));
@@ -120,6 +123,12 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $this->es_process_next();
     }
 
+    /**
+     * Grabs the next post in the queue and sends it to the API.
+     * Updates the postmeta indicating that this post has been synced.
+     * Returns a JSON object containing the API response for the current post
+     * as well as stats on the sync queue.
+     */
     public function es_process_next() {
       global $wpdb;
       $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue' AND meta_value = 1";
