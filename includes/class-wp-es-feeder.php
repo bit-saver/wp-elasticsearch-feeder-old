@@ -24,6 +24,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     private function load_dependencies() {
+      require_once plugin_dir_path( dirname( __FILE__ ) ) . 'vendor/autoload.php';
       require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wp-es-feeder-loader.php';
       require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-wp-es-feeder-admin.php';
       $this->loader = new wp_es_feeder_Loader();
@@ -53,7 +54,6 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       add_action( 'trash_post', array( &$this, 'delete_post' ) );
       add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
       add_action( 'wp_ajax_es_sync_status', array($this, 'get_sync_status') );
-      add_action( 'wp_ajax_es_post_ids', array($this, 'get_post_ids') );
       add_action( 'wp_ajax_es_initiate_sync', array($this, 'es_initiate_sync') );
       add_action( 'wp_ajax_es_process_next', array($this, 'es_process_next') );
     }
@@ -82,20 +82,6 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $post_id = $_POST['post_id'];
       $status = get_post_meta($post_id, '_cdp_sync_status', true) ?: 'Never synced';
       echo $status;
-      exit;
-    }
-
-    public function get_post_ids() {
-      global $wpdb;
-      $opts = get_option( $this->plugin_name );
-      $post_types = $opts[ 'es_post_types' ];
-      $formats = implode(',', array_fill(0, count($post_types), '%s'));
-      $query = "SELECT p.ID FROM $wpdb->posts p 
-                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m
-                    ON p.ID = m.post_id 
-                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND m.meta_value != 'no'";
-      $query = $wpdb->prepare($query, array_keys($post_types));
-      echo json_encode($wpdb->get_col($query));
       exit;
     }
 
@@ -223,7 +209,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       global $wpdb;
       do {
         $uid = uniqid();
-        $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_uid' AND meta_value = $uid";
+        $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_uid' AND meta_value = '$uid'";
       } while ($wpdb->get_var($query));
       $callback = plugin_dir_url(dirname(__FILE__)) . 'callback.php?uid=' . $uid;
       update_post_meta($post->ID, '_cdp_sync_uid', $uid);
@@ -266,52 +252,40 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $is_internal = true;
       }
 
-      $curl = curl_init();
-      curl_setopt($curl, CURLOPT_URL, $request['url']);
-      curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
-      curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-      curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($curl, CURLOPT_TIMEOUT, 10);
-      curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
-      $headers = array('Content-Type: application/json');
-      if ($callback) $headers[] = "callback: $callback";
+      $headers = [];
+      if ($callback) $headers['callback'] = $callback;
 
-      // if a body is provided
-      if ($request['body']) {
-        // unwrap the post data from ajax call
-        if (!$is_internal) {
-          $body = urldecode(base64_decode($request['body']));
-        } else {
-          $body = json_encode($request['body']);
-        }
+      $client = new GuzzleHttp\Client();
 
-        // check if domain is mapped
-        $opt = get_option( $this->plugin_name );
-        $protocol = is_ssl() ? 'https://' : 'http://';
-        $opt_url = $opt['es_wpdomain'];
-        $opt_url = str_replace($protocol, '', $opt_url);
-        $site_url = site_url();
-        $site_url = str_replace($protocol, '', $site_url);
-
-        if ($opt_url !== $site_url) {
-          $body = str_replace($site_url, $opt_url, $body);
-        }
-
-        // obtain string length
-        $length = strlen($body);
-        $headers[] = 'Content-Length: ' . $length;
-
-        // curl options
-        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-      } else {
-        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $request['method']);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+      try {
+        $client->get($request['url'], ['http_errors' => false]);
+      } catch (GuzzleHttp\Exception\ConnectException $e) {
+        $error = json_encode($e->getHandlerContext());
       }
 
-      $results = curl_exec($curl);
-      curl_close($curl);
+      if ( isset($error) ){
+        $results = $error;
+      } else {
+        // if a body is provided
+        if ( isset($request['body']) ) {
+          // unwrap the post data from ajax call
+          if (!$is_internal) {
+            $body = urldecode(base64_decode($request['body']));
+          } else {
+            $body = json_encode($request['body']);
+            $headers['Content-Type'] = 'application/json';
+          }
+
+          $body = $this->is_domain_mapped($body);
+
+          $response = $client->request($request['method'], $request['url'], ['body' => $body, 'http_errors' => false, 'headers' => $headers]);
+        } else {
+          $response = $client->request($request['method'], $request['url'], ['http_errors' => false, 'headers' => $headers]);
+        }
+
+        $body = $response->getBody();
+        $results = $body->getContents();
+      }
 
       if ($is_internal || (isset($request['print']) && !$request['print'])) {
         return json_decode($results);
@@ -319,6 +293,22 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         wp_send_json(json_decode($results));
         return null;
       }
+    }
+
+    private function is_domain_mapped( $body ) {
+      // check if domain is mapped
+      $opt = get_option( $this->plugin_name );
+      $protocol = is_ssl() ? 'https://' : 'http://';
+      $opt_url = $opt['es_wpdomain'];
+      $opt_url = str_replace($protocol, '', $opt_url);
+      $site_url = site_url();
+      $site_url = str_replace($protocol, '', $site_url);
+
+      if ($opt_url !== $site_url) {
+        $body = str_replace($site_url, $opt_url, $body);
+      }
+
+      return $body;
     }
 
     public function get_uuid($post) {

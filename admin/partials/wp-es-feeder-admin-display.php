@@ -48,9 +48,7 @@
 				}
 			}
 
-			$es_allowed_types = $feeder->es_request(array('url' => $options['es_url'] . '/types'));
-
-
+			$es_allowed_types = $feeder->es_request(array('url' => $options['es_url'] . '/types', 'method' => 'GET'));
     ?>
 
     <?php
@@ -90,7 +88,7 @@
 							<?php 
 							$post_types = get_post_types( array( 'public' => true ) );
 							foreach($post_types as $key => $value) {
-                                if (!in_array($key, $es_allowed_types)) continue;
+                                if ($es_allowed_types && !in_array($key, $es_allowed_types)) continue;
 								$value_state = (array_key_exists($key, $es_post_types))?$es_post_types[$value]:0;
 								$checked = ($value_state == 1)?'checked="checked"':'';
 
