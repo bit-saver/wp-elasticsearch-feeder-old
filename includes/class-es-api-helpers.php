@@ -9,9 +9,9 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
     public static function get_post_type_label($post_type = 'post', $display = 'name') {
       $obj = get_post_type_object($post_type);
       if (is_object($obj)) {
-        $labels = $obj -> labels;
+        $labels = $obj->labels;
       }
-      return strtolower($labels -> $display);
+      return strtolower(isset($labels) ? $labels->$display : $post_type);
     }
 
     public static function get_featured_image( $id ) {
@@ -195,6 +195,54 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
       $output = apply_filters( 'the_content', $post->post_content );
 
       return $output;
+    }
+  }
+}
+
+if ( !class_exists( 'ES_FEEDER_SYNC' ) ) {
+  /**
+   * Class ES_FEEDER_SYNC
+   *
+   * Contains constants used to represent and evaluate various sync states.
+   */
+  class ES_FEEDER_SYNC {
+    const NOT_SYNCED = 0;
+    const SYNCING = 1;
+    const SYNC_WHILE_SYNCING = 2;
+    const SYNCED = 3;
+    const RESYNC = 4;
+    const ERROR = 5;
+
+    /**
+     * Returns English string version of status.
+     *
+     * @param $status
+     * @return string
+     */
+    public static function display($status) {
+      switch ($status) {
+        case ES_FEEDER_SYNC::NOT_SYNCED: return 'Not Synced';
+        case ES_FEEDER_SYNC::SYNCING: return 'Syncing';
+        case ES_FEEDER_SYNC::SYNCED: return 'Synced';
+        case ES_FEEDER_SYNC::SYNC_WHILE_SYNCING: return 'Could not sync while sync in progress';
+        case ES_FEEDER_SYNC::RESYNC: return 'Resync Required';
+        case ES_FEEDER_SYNC::ERROR: return 'Error';
+        default: return 'Never Synced';
+      }
+    }
+
+    /**
+     * Returns true if the status is not representative of a syncing state.
+     *
+     * @param $status
+     * @return bool
+     */
+    public static function sync_allowed($status) {
+      switch ($status) {
+        case ES_FEEDER_SYNC::SYNC_WHILE_SYNCING:
+        case ES_FEEDER_SYNC::SYNCING: return false;
+        default: return true;
+      }
     }
   }
 }

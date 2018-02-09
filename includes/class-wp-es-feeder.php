@@ -78,10 +78,13 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       return $this->proxy;
     }
 
+    /**
+     * Triggered via AJAX, retreives a post's sync status for display.
+     */
     public function get_sync_status() {
       $post_id = $_POST['post_id'];
-      $status = get_post_meta($post_id, '_cdp_sync_status', true) ?: 'Never synced';
-      echo $status;
+      $status = get_post_meta($post_id, '_cdp_sync_status', true);
+      echo ES_FEEDER_SYNC::display($status);
       exit;
     }
 
@@ -89,6 +92,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * Triggered via AJAX, clears out old sync data and initiates a new sync process.
      */
     public function es_initiate_sync() {
+      check_admin_referer();
       global $wpdb;
       $wpdb->delete($wpdb->postmeta, array('meta_value' => '_cdp_sync_queue'));
       $opts = get_option( $this->plugin_name );
@@ -116,16 +120,15 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * as well as stats on the sync queue.
      */
     public function es_process_next() {
+      check_admin_referer();
       global $wpdb;
       $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue' AND meta_value = 1";
       $post_id = $wpdb->get_var($query);
       if (!$post_id) {
         $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
         $row = $wpdb->get_row($query);
-        $total = $row->total;
-        $complete = $row->total - $row->incomplete;
         $wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_queue'));
-        echo json_encode(array('done' => 1, 'total' => $total, 'complete' => $complete));
+        echo json_encode(array('done' => 1, 'total' => $row->total, 'complete' => ($row->total - $row->incomplete)));
         exit;
       }
       update_post_meta($post_id, '_cdp_sync_queue', "0");
@@ -143,9 +146,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       if (array_key_exists('index_post_to_cdp_option', $_POST)) {
         update_post_meta(
-            $id,
-            '_iip_index_post_to_cdp_option',
-            $_POST['index_post_to_cdp_option']
+          $id,
+          '_iip_index_post_to_cdp_option',
+          $_POST[ 'index_post_to_cdp_option' ]
         );
       }
 
@@ -154,6 +157,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         return;
       }
 
+
       // switch operation based on post status
       if ( $post->post_status === 'publish' ) {
       
@@ -161,7 +165,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $shouldIndex = $_POST['index_post_to_cdp_option'];
         
         // default to indexing - post has to be specifically set to 'no'
-        if( $shouldIndex === 'no' ) { 
+        if( $shouldIndex === 'no' ) {
           $this->delete( $post );
         } else {
           $this->addOrUpdate( $post );
@@ -188,21 +192,51 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $this->delete( $post );
     }
 
+    /**
+     * Determines if a post can be synced or not. Syncable means that it is not in the process
+     * of being synced. If it is not syncable, update the sync status to inform the user that
+     * they needs to wait until the sync is complete and then resync.
+     *
+     * @param $post
+     * @return bool
+     */
+    public function is_syncable( $post ) {
+      // check sync status
+      $sync_status = get_post_meta($post->ID, '_cdp_sync_status', true);
+      if (!ES_FEEDER_SYNC::sync_allowed($sync_status)) {
+        update_post_meta($post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::SYNC_WHILE_SYNCING);
+        return false;
+      }
+      return true;
+    }
+
     public function addOrUpdate( $post, $print = true ) {
+      if ( !$this->is_syncable( $post ) ) {
+        $response = ['error' => 1, 'message' => 'Could not sync while sync in progress.'];
+        if (!$print)
+          wp_send_json($response);
+        return $response;
+      }
+
       // plural form of post type
       $post_type_name = ES_API_HELPER::get_post_type_label( $post->post_type, 'name' );
       // settings and configuration for plugin
       $config = get_option( $this->plugin_name );
 
       // api endpoint for wp-json
-      $wp_api_url = '/elasticsearch/v1/'.rawurlencode($post_type_name).'/'.$post->ID;
+      $wp_api_url = '/'.ES_API_HELPER::NAME_SPACE.'/'.rawurlencode($post_type_name).'/'.$post->ID;
       $request = new WP_REST_Request('GET', $wp_api_url);
       $api_response = rest_do_request( $request );
       $api_response = $api_response->data;
 
-      if (!$api_response) {
+      if ( !$api_response || isset( $api_response[ 'code' ] ) ) {
         error_log( print_r( $this->error . 'addOrUpdate() calling wp rest failed', true ) );
-        return;
+        $api_response['error'] = true;
+        $api_response['url'] = $wp_api_url;
+        if ( $print ) {
+          wp_send_json( $api_response );
+        }
+        return $api_response;
       }
 
       // create callback for this post
@@ -213,7 +247,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       } while ($wpdb->get_var($query));
       $callback = get_rest_url(null, ES_API_HELPER::NAME_SPACE . '/callback/' . $uid);
       update_post_meta($post->ID, '_cdp_sync_uid', $uid);
-      update_post_meta($post->ID, '_cdp_sync_status', 'Syncing');
+      update_post_meta($post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::SYNCING);
 
       $options = array(
         'url' => $config[ 'es_url' ] . '/' . $post->post_type,
@@ -231,6 +265,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     public function delete( $post ) {
+      if ( !$this->is_syncable( $post ) ) return;
       $opt = get_option( $this->plugin_name );
 
       $uuid = $this->get_uuid($post);
@@ -238,10 +273,15 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       $options = array(
          'url' => $delete_url,
-         'method' => 'DELETE'
+         'method' => 'DELETE',
+         'print' => false
       );
 
-      $this->es_request( $options );
+      $response = $this->es_request( $options );
+      if (!isset($response['error']) || !$response['error']) {
+        update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::NOT_SYNCED );
+        delete_post_meta( $post->ID, '_cdp_sync_uid' );
+      }
     }
 
     public function es_request($request, $callback = null) {
@@ -257,6 +297,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       $client = new GuzzleHttp\Client();
 
+      // TODO: Investigate alternative methods to accomplish this URL check. The API gets mad since we don't have a GET route for this yet.
       try {
         $client->get($request['url'], ['http_errors' => false]);
       } catch (GuzzleHttp\Exception\ConnectException $e) {
@@ -311,6 +352,12 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       return $body;
     }
 
+    /**
+     * Construct UUID which is site domain delimited by dashes and not periods, underscore, and post ID.
+     *
+     * @param $post
+     * @return string
+     */
     public function get_uuid($post) {
       $opt = get_option( $this->plugin_name );
       $url = $opt['es_wpdomain'];

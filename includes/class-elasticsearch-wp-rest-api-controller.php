@@ -20,7 +20,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     }
 
     public function register_routes() {
-      register_rest_route( ES_API_HELPER::NAME_SPACE, '/' . rawurlencode( $this->resource ), array(
+      register_rest_route( 'elasticsearch/v1', '/' . rawurlencode( $this->resource ), array(
         array(
           'methods' => WP_REST_Server::READABLE,
           'callback' => array(
@@ -270,6 +270,11 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
 }
 
+/**
+ * Class WP_ES_FEEDER_Callback_Controller
+ *
+ * Handles the callback from the ES API when the sync of a post completes or fails.
+ */
 class WP_ES_FEEDER_Callback_Controller {
 
   public function register_routes() {
@@ -308,14 +313,17 @@ class WP_ES_FEEDER_Callback_Controller {
     $uid = $request->get_param('uid');
     $post_id = $data['doc']['post_id'];
 
-    file_put_contents( ABSPATH . 'callback.log', print_r( $uid, 1 ) . "\r\n", FILE_APPEND );
-    file_put_contents( ABSPATH . 'callback.log', print_r( $data, 1 ) . "\r\n", FILE_APPEND );
+    file_put_contents( ABSPATH . 'callback.log', "INCOMING CALLBACK FOR UID: $uid\r\n" . print_r( $data, 1 ) . "\r\n", FILE_APPEND );
 
     if ($post_id == $wpdb->get_var("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_uid' AND meta_value = '" . $wpdb->_real_escape($uid) . "'")) {
+      $sync_status = get_post_meta($post_id, '_cdp_sync_status', true);
       if (!$data['error']) {
-        update_post_meta($post_id,'_cdp_sync_status', 'Synced');
+        if ($sync_status == ES_FEEDER_SYNC::SYNC_WHILE_SYNCING)
+          update_post_meta($post_id,'_cdp_sync_status', ES_FEEDER_SYNC::RESYNC);
+        else
+          update_post_meta($post_id,'_cdp_sync_status', ES_FEEDER_SYNC::SYNCED);
       } else {
-        update_post_meta($post_id,'_cdp_sync_status', 'Error');
+        update_post_meta($post_id,'_cdp_sync_status', ES_FEEDER_SYNC::ERROR);
       }
       $wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_uid', 'meta_value' => $uid));
     }

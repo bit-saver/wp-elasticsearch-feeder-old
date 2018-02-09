@@ -19,8 +19,8 @@
 />
 <label for="index_cdp_no">No</label>
 
-<div>
-    Sync Status: <span id="cdp_sync_status"><?=$sync?></span>
+<div style="margin-top: 6px;">
+    Sync Status: <span id="cdp_sync_status"><?=ES_FEEDER_SYNC::display($sync);?></span>
 </div>
 <script type="text/javascript">
     jQuery(function($) {

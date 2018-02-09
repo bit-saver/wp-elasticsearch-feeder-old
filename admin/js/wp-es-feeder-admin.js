@@ -1,128 +1,132 @@
-(function ($) {
-  'use strict';
-  var settings = {};
-  var completed = 0;
-  var total = 0;
-  var current = null;
-  var paused = false;
+'use strict';
+(function($) {
+  // sync object contains data related to the current (if any) resync
+  var sync = {
+    total: 0,
+    complete: 0,
+    post: null,
+    paused: false
+  };
 
-  $(window).load(function () {
-    init();
-    getSettings();
+  /**
+   * Register click listener functions, load sync data from the injected variable, and
+   * update sync state if a sync was in progress.
+   */
+  $(window).load(function() {
+    $('#es_test_connection').on('click', testConnection);
+    $('#es_query_index').on('click', queryIndex);
+    $('#es_resync').on('click', resyncStart);
+    $('#es_resync_control').on('click', resyncControl);
+
+    console.log(es_feeder_sync);
+    sync.total = parseInt(es_feeder_sync.total);
+    sync.complete = parseInt(es_feeder_sync.complete);
+    sync.paused = es_feeder_sync.paused === "1";
+    if (sync.paused) {
+      createProgress();
+      updateProgress();
+    }
   });
 
-  function init() {
-    testConnectionClick();
-    // createIndexClick();
-    queryIndexClick();
-    // deleteIndexClick();
-    reindexClick();
-  }
-
-  function wpRequest(data) {
-    return new Promise(function (resolve, reject) {
-      $.post(
-        ajaxurl, {
-          action: 'es_request',
-          data: data
-        }, function (response) {
-          resolve(response);
-        });
-    });
-  }
-
-  function testConnectionClick() {
-    $('#es_test_connection').on('click', function (e) {
-      if (!checkpoint()) return;
-      connectionRequest();
-    });
-  }
-
-  // function createIndexClick() {
-  //   $('#es_create_index').on('click', function (e) {
-  //     if (!checkpoint()) return;
-  //     createIndexRequest();
-  //   });
-  // }
-
-  function queryIndexClick() {
-    $('#es_query_index').on('click', function (e) {
-      if (!checkpoint()) return;
-      getCount();
-    });
-  }
-
-  // function deleteIndexClick() {
-  //   $('#es_delete_index').on('click', function (e) {
-  //     if (!checkpoint()) return;
-  //
-  //     var isConfirmed = confirm('Deleting an index removes all of the data stored in that index. Do you want to continue?');
-  //     if (!isConfirmed) {
-  //       return;
-  //     }
-  //
-  //     deleteIndexRequest();
-  //   });
-  // }
-
-  function reindexClick() {
-    $('#es_reindex').on('click', function (e) {
-      // if (!checkpoint()) return;
-      //
-      // deleteIndexRequest()
-      //   .then(function () {
-      //     createIndexRequest();
-      //   }).then(function () {
-      //     processRecords();
-      //   });
-
-      createProgress();
-
-      $.ajax({
-        url: ajaxurl,
-        type: 'POST',
-        dataType: 'JSON',
+  /**
+   * Send a basic request to the provided URL and print the response in the output container.
+   */
+  function testConnection() {
+    $('#es_output').text('');
+    disableManage();
+    $.ajax({
+      url: ajaxurl,
+      type: 'POST',
+      dataType: 'JSON',
+      data: {
+        _wpnonce: $('#_wpnonce').val(),
+        action: 'es_request',
         data: {
-          action: 'es_initiate_sync'
-        },
-        success: function (result) {
-          console.log(result);
-          if (result.error) {
-            clearProgress();
-          } else {
-            completed = result.completed;
-            total = result.total;
-            current = result.response.req;
-            processQueue();
-          }
-        },
-        error: function (result) {
-          console.error(result);
-          clearProgress();
+          method: 'GET',
+          url: $('#es_url').val()
         }
-      });
+      },
+      success: function (result) {
+        $('#es_output').text(JSON.stringify(result, null, 2));
+      },
+      error: function (result) {
+        $('#es_output').text(JSON.stringify(result, null, 2));
+      }
+    }).always(enableManage);
+  }
+
+  /**
+   * Execute an arbitrary query against the API.
+   */
+  function queryIndex() {
+    // TODO: Add query handler to house a query test of some kind.
+  }
+
+  /**
+   * TODO: Initiate a new sync by deleting ALL of this site's posts from ES
+   * Clear out old sync post meta (if any) and initiate a new sync process.
+   */
+  function resyncStart() {
+    sync = {
+      total: 0,
+      complete: 0,
+      post: null,
+      paused: false
+    };
+    createProgress();
+    updateProgress();
+    $.ajax({
+      url: ajaxurl,
+      type: 'POST',
+      dataType: 'JSON',
+      data: {
+        _wpnonce: $('#_wpnonce').val(),
+        action: 'es_initiate_sync'
+      },
+      success: function (result) {
+        handleQueueResult(result);
+      },
+      error: function (result) {
+        console.error(result);
+        clearProgress();
+      }
     });
   }
 
+  /**
+   * Pause or resume the current sync process and update the UI accordingly.
+   */
+  function resyncControl() {
+    if (sync.paused) {
+      $('#es_resync_control').html('Pause Sync');
+      sync.paused = false;
+      $('#progress-bar').removeClass('paused');
+      $('.spinner-text').html('Processing... Do not leave this page.');
+      processQueue();
+    } else {
+      $('#es_resync_control').html('Resume Sync');
+      $('#progress-bar').addClass('paused');
+      $('.spinner-text').html('Paused.');
+      sync.paused = true;
+    }
+  }
+
+  /**
+   * Trigger backend processing of the next available Post in the sync queue
+   * and relay the results to the result handler function.
+   */
   function processQueue() {
-    updateProgress();
+    if (sync.paused) return;
     $.ajax({
       type: 'POST',
       dataType: 'JSON',
       url: ajaxurl,
       data: {
+        _wpnonce: $('#_wpnonce').val(),
         action: 'es_process_next'
       },
       success: function (result) {
-        console.log(result);
-        if (result.error || result.done) {
-          clearProgress();
-        } else {
-          completed = result.completed;
-          total = result.total;
-          current = result.response.req;
-          processQueue();
-        }
+        handleQueueResult(result);
       },
       error: function (result) {
         console.error(result);
@@ -130,278 +134,66 @@
     });
   }
 
-  function pauseProgress() {
-    $('#es_reindex').val('Resume Sync');
+  /**
+   * Store result data in the local variable and update the state and progress bar,
+   * and spew the raw result into the output container.
+   *
+   * @param result
+   */
+  function handleQueueResult(result) {
+    if (result.error || result.done) {
+      clearProgress();
+    } else {
+      sync.complete = result.complete;
+      sync.total = result.total;
+      sync.post = result.response.req;
+      updateProgress();
+      processQueue();
+    }
+    $('#es_output').text(JSON.stringify(result, null, 2));
   }
 
+  /**
+   * Add relevant markup for the progress bar and state UI/UX.
+   */
   function createProgress() {
-    $('.index-spinner').html(renderCounter());
-    $('.progress-wrapper').html('<div id="progress-bar"><span></span></div>');
-    $('#es_reindex').val('Pause Sync');
+    var html = '<div class="spinner is-active spinner-animation">';
+    html += '<span class="spinner-text">' + (sync.paused ? 'Paused.' : 'Processing... Do not leave this page.') + '</span> <span class="count"></span> <span class="current-post"></span>';
+    html += '</div>';
+    $('.index-spinner').html(html);
+    $('.progress-wrapper').html('<div id="progress-bar" ' + (sync.paused ? 'class="paused"' : '') + '><span></span></div>');
+    $('#es_resync_control').html(sync.paused ? 'Resume Sync' : 'Pause Sync').show();
   }
 
+  /**
+   * Update the pgoress bar and state UI using the local sync variable.
+   */
   function updateProgress() {
-    $('.index-spinner .count').html(completed + ' / ' + total);
-    $('#progress-bar span').animate({'width': (completed / total * 100) + '%'});
-    $('.current-post').html((current ? 'Indexing post: ' + (current.title ? current.title : current.type + ' post #' + current.post_id) : ''));
+    $('.index-spinner .count').html(sync.complete + ' / ' + sync.total);
+    $('#progress-bar span').animate({'width': (sync.complete / sync.total * 100) + '%'});
+    $('.current-post').html((sync.post ? 'Indexing post: ' + (sync.post.title ? sync.post.title : sync.post.type + ' post #' + sync.post.post_id) : ''));
   }
 
+  /**
+   * Remove progress bar and state UI.
+   */
   function clearProgress() {
     $('.index-spinner').empty();
     $('.progress-wrapper').empty();
-    $('#es_reindex').val('Re-sync Data');
+    $('#es_resync_control').hide();
   }
 
-  function generatePostBody(method, url, elasticBody) {
-    var options = {
-      method: method,
-      url: url
-    };
-
-    if (elasticBody) {
-      try {
-        var body = JSON.stringify(elasticBody);
-        options.body = window.btoa(encodeURIComponent(body));
-      } catch (err) {
-        console.info('document endured errors while encoding:');
-        console.log(err);
-        console.info('This is your culprit', body);
-        console.log('\n\n');
-      }
-    }
-
-    return options;
+  /**
+   * Disable the manage buttons.
+   */
+  function disableManage() {
+    $('.inside.manage-btns button').attr('disabled', true);
   }
 
-  function connectionRequest() {
-    var opts = generatePostBody('GET', settings.server);
-
-    return wpRequest(opts)
-      .then(function (data) {
-        if (!data || data.error) {
-          var errorMessage = 'Connection failed';
-          jsonDisplay(
-            JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
-          );
-        }
-        else {
-          jsonDisplay(JSON.stringify(data, null, 2));
-        }
-      });
-  }
-
-  // function createIndexRequest() {
-  //   var opts = generatePostBody('PUT', settings.server + '/' + settings.index);
-  //
-  //   return wpRequest(opts)
-  //     .then(function (data) {
-  //       if (!data | data.error) {
-  //         var errorMessage = 'Index creation failed.';
-  //         jsonDisplay(
-  //           JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
-  //         );
-  //       }
-  //       else {
-  //         jsonDisplay(JSON.stringify(data, null, 2));
-  //       }
-  //     });
-  // }
-
-  // function deleteIndexRequest() {
-  //   var opts = generatePostBody('DELETE', settings.server + '/' + settings.index);
-  //
-  //   return wpRequest(opts)
-  //     .then(function (data) {
-  //       if (!data | data.error) {
-  //         var errorMessage = 'Index deletion failed';
-  //         jsonDisplay(
-  //           JSON.stringify($.extend(data, { message: errorMessage }), null, 2)
-  //         );
-  //       }
-  //       else {
-  //         jsonDisplay(JSON.stringify(data, null, 2));
-  //       }
-  //     });
-  // }
-
-  function processRecords() {
-    $('.index-spinner').html(renderCounter());
-
-    var postTypePromises = [];
-    settings.postTypes.forEach(function (type) {
-      postTypePromises.push(getPostTypeList(type));
-    });
-
-    Promise.all(postTypePromises).then(function (isProcessing) {
-      var isAllComplete = isProcessing.every(function (processing) {
-        return processing === false;
-      });
-      if (isAllComplete) {
-        var timer = setTimeout(function () {
-          getCount();
-          clearTimeout(timer);
-        }, 5000);
-      }
-    })
-      .catch(function (error) {
-        console.error(error);
-        $('.index-spinner').empty();
-        var errorMessage = 'Error encountered while indexing.';
-        jsonDisplay(
-          JSON.stringify({ error: true, message: errorMessage }, null, 2)
-        );
-      });
-  }
-
-  function getPostTypeList(type, page) {
-    if (!page) { page = 1; }
-    if (!type) { throw new Error('getPostTypeList(): no post-type parameter supplied'); }
-
-    // apiType is the plural version of the post-type
-    var apiType = $('[data-type="' + type + '"]').text().toLowerCase();
-    return request(settings.domain + '/wp-json/elasticsearch/v1/' + apiType + '?page=' + page, {
-      credentials: 'include'
-    })
-      .then(function (data) {
-        if (!(data instanceof Array)) {
-          return true;
-        }
-        else if (!data.length) {
-          return true;
-        }
-
-        data.forEach(function (record) {
-          indexRecord(record, type);
-        });
-
-        page++;
-      })
-      .then(function (isEmpty) {
-        if (isEmpty) {
-          return false;
-        }
-
-        return getPostTypeList(type, page);
-      });
-  }
-
-  function indexRecord(data, type) {
-    var opts = generatePostBody('POST', settings.server + '/' + settings.index + '/' + type, data);
-    return wpRequest(opts);
-  }
-
-  function getCount() {
-    var opts = generatePostBody('POST', settings.server + '/search', {index: 'videos'});
-
-    wpRequest(opts).then(function (data) {
-      var count = (typeof data.count === "undefined") ? 0 : data.count;
-      $('.index-spinner')
-        .html('<span style="top: 10px; position: absolute;">' + count + ' records indexed.</span>');
-      jsonDisplay(
-        JSON.stringify(data, null, 2)
-      );
-    });
-  }
-
-  function checkpoint() {
-    getSettings();
-    // if (!isValidIndex()) {
-    //   return false;
-    // }
-    return true;
-  }
-
-  function renderCounter() {
-    var html = '<div class="spinner is-active spinner-animation">';
-    html += 'Processing... Do not leave this page. <span class="count"></span> <span class="current-post"></span>';
-    html += '</div>';
-    return html;
-  }
-
-  function request(url, options) {
-    return fetch(url, options)
-      .then(function (response) {
-        return response.json();
-      })
-      .catch(function (error) {
-        return { error: true, message: '' };
-      });
-  }
-
-  function jsonDisplay(str) {
-    if (typeof str !== 'string') {
-      throw new Error('jsonDisplay(): argument must be a string');
-    }
-    $('#es_output').text(str);
-  }
-
-  // function notice(str) {
-  //   if (typeof str !== 'string') {
-  //     throw new Error('notice(): argument must be a string');
-  //   }
-  //   $('.wp_es_settings').prepend(str);
-  // }
-  //
-  // function noticeTimer() {
-  //   var timer = setTimeout(function () {
-  //     $('.notice').remove();
-  //     clearTimeout(timer);
-  //   }, 5000);
-  // }
-  //
-  // function isValidIndex() {
-  //   var validName = new RegExp('(^[a-z0-9_\.-]+$)', 'gi');
-  //
-  //   if (!settings.index || !validName.test(settings.index)) {
-  //     var errorMessage = 'Please supply a valid index name.';
-  //     notice('<div class="notice notice-error"><p>' + errorMessage + '</p></div>');
-  //     noticeTimer();
-  //     return false;
-  //   }
-  //
-  //   return true;
-  // }
-
-  function getSelectedPostTypes() {
-    var types = [];
-    $('[id^="es_post_type_"]').each(function (index, element) {
-      if (element.checked) {
-        types.push($(element).next().attr('data-type').toLowerCase())
-      }
-    });
-
-    return types;
-  }
-
-  // function getRegion() {
-  //   var server = $('#es_url').val();
-  //
-  //   if (server.indexOf('amazonaws.com') < 0) {
-  //     return '';
-  //   }
-  //
-  //   server = server.split('.');
-  //
-  //   if (server.length === 5) {
-  //     return server[1];
-  //   }
-  //
-  //   throw new Error('getRegion(): Not a properly formatted AWS URL');
-  // }
-
-  function getSettings() {
-    settings = {
-      domain: $('#es_wpdomain').val(),
-      server: $('#es_url').val(),
-      postTypes: getSelectedPostTypes(),
-      auth: {
-        enabled: $('#es_auth_required').is(':checked'),
-        config: {
-          accessKeyId: $('#es_access_key').val(),
-          secretAccessKey: $('#es_secret_key').val()
-        }
-      }
-    };
-    return settings;
+  /**
+   * Enable the manage buttons.
+   */
+  function enableManage() {
+    $('.inside.manage-btns button').attr('disabled', null);
   }
 })(jQuery);

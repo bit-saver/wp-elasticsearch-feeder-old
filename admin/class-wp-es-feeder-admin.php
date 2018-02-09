@@ -18,7 +18,7 @@ class wp_es_feeder_Admin {
   public function enqueue_scripts() {
     global $wpdb;
 
-    wp_register_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder.js',
+    wp_register_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder-admin.js',
       array( 'jquery' ), false, false );
 
     $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
