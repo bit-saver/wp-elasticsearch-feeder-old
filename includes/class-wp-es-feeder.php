@@ -211,7 +211,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $uid = uniqid();
         $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_uid' AND meta_value = '$uid'";
       } while ($wpdb->get_var($query));
-      $callback = plugin_dir_url(dirname(__FILE__)) . 'callback.php?uid=' . $uid;
+      $callback = get_rest_url(null, ES_API_HELPER::NAME_SPACE . '/callback/' . $uid);
       update_post_meta($post->ID, '_cdp_sync_uid', $uid);
       update_post_meta($post->ID, '_cdp_sync_status', 'Syncing');
 

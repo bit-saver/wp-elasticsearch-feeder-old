@@ -6,14 +6,10 @@ if ( !defined( 'ABSPATH' ) ) {
 
 if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
   class WP_ES_FEEDER_REST_Controller extends WP_REST_Controller {
-    public $plugin_name;
-    public $namespace;
     public $resource;
     public $type;
 
     public function __construct( $post_type ) {
-      $this->plugin_name = 'wp-es-feeder';
-      $this->namespace = 'elasticsearch/v1';
       $this->resource = ES_API_HELPER::get_post_type_label( $post_type, 'name' );
       $this->type = $post_type;
     }
@@ -24,7 +20,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     }
 
     public function register_routes() {
-      register_rest_route( $this->namespace, '/' . rawurlencode( $this->resource ), array(
+      register_rest_route( ES_API_HELPER::NAME_SPACE, '/' . rawurlencode( $this->resource ), array(
         array(
           'methods' => WP_REST_Server::READABLE,
           'callback' => array(
@@ -50,7 +46,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         )
       ) );
 
-      register_rest_route( $this->namespace, '/' . rawurlencode( $this->resource ) . '/(?P<id>[\d]+)', array(
+      register_rest_route( ES_API_HELPER::NAME_SPACE, '/' . rawurlencode( $this->resource ) . '/(?P<id>[\d]+)', array(
         array(
           'methods' => WP_REST_Server::READABLE,
           'callback' => array(
@@ -198,7 +194,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       }
 
       // pre-approved
-      $opt = get_option( $this->plugin_name );
+      $opt = get_option( ES_API_HELPER::PLUGIN_NAME );
       $opt_url = $opt[ 'es_wpdomain' ];
       $post_data[ 'link' ] = str_replace( site_url(), $opt_url, get_permalink( $post->ID ) );
 
@@ -260,7 +256,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     }
 
     public function get_site() {
-      $opt = get_option( $this->plugin_name );
+      $opt = get_option( ES_API_HELPER::PLUGIN_NAME );
       $url = $opt[ 'es_wpdomain' ];
       $args = parse_url( $url );
       $host = $url;
@@ -272,6 +268,69 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     }
   }
 
+}
+
+class WP_ES_FEEDER_Callback_Controller {
+
+  public function register_routes() {
+    register_rest_route( ES_API_HELPER::NAME_SPACE, '/callback/(?P<uid>[0-9a-zA-Z]+)', array(
+      array(
+        'methods' => WP_REST_Server::ALLMETHODS,
+        'callback' => array(
+          $this,
+          'processResponse'
+        ),
+        'args' => array(
+          'uid' => array(
+            'validate_callback' => function ( $param, $request, $key ) {
+              return true;
+            }
+          )
+        ),
+        'permission_callback' => array(
+          $this,
+          'get_items_permissions_check'
+        )
+      )
+    ) );
+  }
+
+  /**
+   * @param $request WP_REST_Request
+   * @return array
+   */
+  public function processResponse( $request ) {
+    global $wpdb;
+    $data = $request->get_json_params();
+    if (!$data)
+      $data = $request->get_body_params();
+
+    $uid = $request->get_param('uid');
+    $post_id = $data['doc']['post_id'];
+
+    file_put_contents( ABSPATH . 'callback.log', print_r( $uid, 1 ) . "\r\n", FILE_APPEND );
+    file_put_contents( ABSPATH . 'callback.log', print_r( $data, 1 ) . "\r\n", FILE_APPEND );
+
+    if ($post_id == $wpdb->get_var("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_uid' AND meta_value = '" . $wpdb->_real_escape($uid) . "'")) {
+      if (!$data['error']) {
+        update_post_meta($post_id,'_cdp_sync_status', 'Synced');
+      } else {
+        update_post_meta($post_id,'_cdp_sync_status', 'Error');
+      }
+      $wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_uid', 'meta_value' => $uid));
+    }
+
+    return ['status' => 'ok'];
+
+  }
+
+  public function get_items_permissions_check( $request ) {
+    return true;
+  }
+
+  public function get_item_permissions_check( $request ) {
+    return true;
+  }
 }
 
 /*
@@ -308,6 +367,9 @@ function register_elasticsearch_rest_routes() {
       register_post_types( $type );
     }
   }
+
+  $controller = new WP_ES_FEEDER_Callback_Controller();
+  $controller->register_routes();
 }
 
 add_action( 'rest_api_init', 'register_elasticsearch_rest_routes' );
