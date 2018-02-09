@@ -20,7 +20,7 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
     }
 
     public function register_routes() {
-      register_rest_route( 'elasticsearch/v1', '/' . rawurlencode( $this->resource ), array(
+      register_rest_route( ES_API_HELPER::NAME_SPACE, '/' . rawurlencode( $this->resource ), array(
         array(
           'methods' => WP_REST_Server::READABLE,
           'callback' => array(
