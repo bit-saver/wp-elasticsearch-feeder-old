@@ -101,7 +101,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $query = "SELECT p.ID FROM $wpdb->posts p 
                   LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m
                     ON p.ID = m.post_id 
-                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND m.meta_value != 'no'";
+                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND (m.meta_value IS NULL OR m.meta_value != 'no')";
       $query = $wpdb->prepare($query, array_keys($post_types));
       $post_ids = $wpdb->get_col($query);
       if (!count($post_ids)) {
@@ -269,11 +269,16 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $opt = get_option( $this->plugin_name );
 
       $uuid = $this->get_uuid($post);
-      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type . '/' . $uuid;
+      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type;
 
       $options = array(
          'url' => $delete_url,
          'method' => 'DELETE',
+         'body' => array(
+           'post_id' => $post->ID,
+           'type' => $post->post_type,
+           'site' => $this->get_site()
+         ),
          'print' => false
       );
 
@@ -299,7 +304,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       // TODO: Investigate alternative methods to accomplish this URL check. The API gets mad since we don't have a GET route for this yet.
       try {
-        $client->get($request['url'], ['http_errors' => false]);
+        $client->get($request['url'], ['http_errors' => false, 'timeout' => '5']);
       } catch (GuzzleHttp\Exception\ConnectException $e) {
         $error = json_encode($e->getHandlerContext());
       }
@@ -370,6 +375,18 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       $host = str_replace('.', '-', $host);
       return "{$host}_{$post->ID}";
+    }
+
+    public function get_site() {
+      $opt = get_option( ES_API_HELPER::PLUGIN_NAME );
+      $url = $opt[ 'es_wpdomain' ];
+      $args = parse_url( $url );
+      $host = $url;
+      if ( array_key_exists( 'host', $args ) )
+        $host = $args[ 'host' ];
+      else
+        $host = str_ireplace( 'https://', '', str_ireplace( 'http://', '', $host ) );
+      return $host;
     }
   }
 }

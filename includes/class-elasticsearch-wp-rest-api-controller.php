@@ -311,7 +311,11 @@ class WP_ES_FEEDER_Callback_Controller {
       $data = $request->get_body_params();
 
     $uid = $request->get_param('uid');
-    $post_id = $data['doc']['post_id'];
+    $post_id = null;
+    if (!$data['error'])
+      $post_id = $data['doc']['post_id'];
+    else
+      $post_id = $data['request']['post_id'];
 
     file_put_contents( ABSPATH . 'callback.log', "INCOMING CALLBACK FOR UID: $uid\r\n" . print_r( $data, 1 ) . "\r\n", FILE_APPEND );
 
