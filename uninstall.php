@@ -29,3 +29,8 @@
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
+
+global $wpdb;
+$wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_status'));
+$wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_uid'));
+$wpdb->delete($wpdb->postmeta, array('meta_key' => '_cdp_sync_queue'));

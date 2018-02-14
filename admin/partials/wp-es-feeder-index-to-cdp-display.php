@@ -1,4 +1,5 @@
 <?php $value = get_post_meta($post->ID, '_iip_index_post_to_cdp_option', true); ?>
+<?php $sync = get_post_meta($post->ID, '_cdp_sync_status', true) ?: 'Never synced'; ?>
 <input 
   type="radio" id="index_cdp_yes" 
   name="index_post_to_cdp_option" 
@@ -17,3 +18,26 @@
   <?php checked($value, 'no'); ?>
 />
 <label for="index_cdp_no">No</label>
+
+<div style="margin-top: 6px;">
+    Sync Status: <span id="cdp_sync_status"><?=ES_FEEDER_SYNC::display($sync);?></span>
+</div>
+<script type="text/javascript">
+    jQuery(function($) {
+      getSyncStatus();
+      function getSyncStatus() {
+        $.ajax({
+          url: ajaxurl,
+          type: 'POST',
+          data: {
+            action: 'es_sync_status',
+            post_id: <?=$post->ID?>
+          },
+          success: function (result) {
+            $('#cdp_sync_status').html(result);
+            setTimeout(getSyncStatus, 3000);
+          }
+        });
+      }
+    });
+</script>

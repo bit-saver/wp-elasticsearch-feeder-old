@@ -16,8 +16,25 @@ class wp_es_feeder_Admin {
   }
 
   public function enqueue_scripts() {
-    wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder-admin.js',
+    global $wpdb;
+
+    wp_register_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder-admin.js',
       array( 'jquery' ), false, false );
+
+    $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
+    $row = $wpdb->get_row($query);
+    $sync = array(
+      'complete' => 0,
+      'total' => $row->total,
+      'paused' => false,
+      'post' => null
+    );
+    if ($row->total) {
+      $sync['complete'] = $row->total - $row->incomplete;
+      $sync['paused'] = true;
+    }
+    wp_localize_script($this->plugin_name, 'es_feeder_sync', $sync);
+    wp_enqueue_script($this->plugin_name);
   }
 
   // Register the administration menu
@@ -84,6 +101,7 @@ class wp_es_feeder_Admin {
     } else {
 
       foreach ( $post_types as $key => $value ) {
+        if (!isset( $input[ 'es_post_type_' . $value ] ) || !$input[ 'es_post_type_' . $value ] ) continue;
         $types[ $value ] = ( isset( $input[ 'es_post_type_' . $value ] ) ) ? 1 : 0;
       }
 
