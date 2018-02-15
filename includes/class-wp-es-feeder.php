@@ -53,7 +53,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );
       add_action( 'trash_post', array( &$this, 'delete_post' ) );
       add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
-      add_action( 'wp_ajax_es_sync_status', array($this, 'get_sync_status') );
+      add_action( 'wp_ajax_es_sync_status', array($this, 'display_sync_status') );
       add_action( 'wp_ajax_es_initiate_sync', array($this, 'es_initiate_sync') );
       add_action( 'wp_ajax_es_process_next', array($this, 'es_process_next') );
     }
@@ -79,13 +79,67 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     /**
-     * Triggered via AJAX, retreives a post's sync status for display.
+     * Triggered via AJAX, displays a post's sync status.
      */
-    public function get_sync_status() {
+    public function display_sync_status() {
       $post_id = $_POST['post_id'];
-      $status = get_post_meta($post_id, '_cdp_sync_status', true);
+      $status = $this->get_sync_status($post_id);
       echo ES_FEEDER_SYNC::display($status);
       exit;
+    }
+
+    /**
+     * Check to see how long a post has been syncing and update to
+     * error status if it's been longer than SYNC_TIMEOUT.
+     * Post modified and sync status can be supplied to save a database query or two.
+     * Then return the status.
+     *
+     * @param $post_id
+     * @param $post_modified - Current post modified date
+     * @param $status - Current sync status
+     * @return int
+     */
+    public function get_sync_status($post_id, $post_modified = null, $status = null) {
+      if (!$status)
+        $status = get_post_meta($post_id, '_cdp_sync_status', true);
+      if ($status != ES_FEEDER_SYNC::ERROR && !ES_FEEDER_SYNC::sync_allowed($status)) {
+        if ($post_modified)
+          $modified_time = get_the_modified_time('U', $post_id);
+        else
+          $modified_time = mysql2date('U', $post_modified, false);;
+        // check to see if we should resolve to error based on time since postmodified
+        $diff = round(((int) abs($modified_time - time())) / 60);
+        if ($diff >= ES_API_HELPER::SYNC_TIMEOUT) {
+          $status = ES_FEEDER_SYNC::ERROR;
+          update_post_meta($post_id, '_cdp_sync_status', $status);
+        }
+      }
+      return $status;
+    }
+
+    /**
+     * Iterate over posts in a syncing or erroneous state. If syncing for longer than
+     * the SYNC_TIMEOUT time, escalate to error status.
+     * Return stats on total errors (if any).
+     */
+    public function check_sync_errors() {
+      global $wpdb;
+      $result = ['errors' => 0];
+      $statuses = array(ES_FEEDER_SYNC::ERROR, ES_FEEDER_SYNC::SYNCING, ES_FEEDER_SYNC::SYNC_WHILE_SYNCING);
+      $statuses = implode(',', $statuses);
+      $query = "SELECT p.ID, p.post_type, p.post_modified, m.meta_value as sync_status FROM $wpdb->posts p LEFT JOIN $wpdb->postmeta m ON p.ID = m.post_id
+                  WHERE m.meta_key = '_cdp_sync_status' AND m.meta_value IN ($statuses)";
+      $rows = $wpdb->get_results($query);
+      foreach ($rows as $row) {
+        $status = $this->get_sync_status($row->ID, $row->post_modified, $row->sync_status);
+        if ($status == ES_FEEDER_SYNC::ERROR) {
+          $result['errors']++;
+          if (!array_key_exists($row->post_type, $result))
+            $result[$row->post_type] = 0;
+          $result[$row->post_type]++;
+        }
+      }
+      return $result;
     }
 
     /**
