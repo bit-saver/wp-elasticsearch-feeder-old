@@ -15,7 +15,8 @@
   $(window).load(function() {
     $('#es_test_connection').on('click', testConnection);
     $('#es_query_index').on('click', queryIndex);
-    $('#es_resync').on('click', resyncStart);
+    $('#es_resync').on('click', resyncStart(0));
+    $('#es_resync_errors').on('click', resyncStart(1));
     $('#es_resync_control').on('click', resyncControl);
 
     console.log(es_feeder_sync);
@@ -66,31 +67,34 @@
    * TODO: Initiate a new sync by deleting ALL of this site's posts from ES
    * Clear out old sync post meta (if any) and initiate a new sync process.
    */
-  function resyncStart() {
-    sync = {
-      total: 0,
-      complete: 0,
-      post: null,
-      paused: false
-    };
-    createProgress();
-    updateProgress();
-    $.ajax({
-      url: ajaxurl,
-      type: 'POST',
-      dataType: 'JSON',
-      data: {
-        _wpnonce: $('#_wpnonce').val(),
-        action: 'es_initiate_sync'
-      },
-      success: function (result) {
-        handleQueueResult(result);
-      },
-      error: function (result) {
-        console.error(result);
-        clearProgress();
-      }
-    });
+  function resyncStart(errorsOnly) {
+    return function() {
+      sync = {
+        total: 0,
+        complete: 0,
+        post: null,
+        paused: false
+      };
+      createProgress();
+      updateProgress();
+      $.ajax( {
+        url: ajaxurl,
+        type: 'POST',
+        dataType: 'JSON',
+        data: {
+          _wpnonce: $( '#_wpnonce' ).val(),
+          action: 'es_initiate_sync',
+          sync_errors: errorsOnly
+        },
+        success: function ( result ) {
+          handleQueueResult( result );
+        },
+        error: function ( result ) {
+          console.error( result );
+          clearProgress();
+        }
+      } );
+    }
   }
 
   /**
