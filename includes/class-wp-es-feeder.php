@@ -48,6 +48,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       // save/update our plugin options
       $this->loader->add_action( 'admin_init', $plugin_admin, 'options_update' );
 
+      // admin notices
+      $this->loader->add_action('admin_notices', $plugin_admin, 'sync_errors_notice');
+
       // elasticsearch indexing hook actions
       add_action( 'save_post', array( $this, 'save_post' ), 10, 2 );
       add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );

@@ -118,4 +118,30 @@ class wp_es_feeder_Admin {
       'validate'
     ) );
   }
+
+  /**
+   * Checks for sync errors and displays an admin notice if there are errors and the notice
+   * wasn't dismissed in the last 24 hours.
+   */
+  public function sync_errors_notice() {
+    global $feeder;
+    if (isset($_COOKIE['cdp-feeder-notice-dismissed'])) return;
+    $errors = $feeder->check_sync_errors();
+    if ($errors['errors']) { ?>
+      <div class="notice notice-error feeder-notice is-dismissible">
+        <p>WP ES Feeder has enountered <?=$errors['errors']?> error(s). Click <a href="<?=admin_url('options-general.php?page=wp-es-feeder')?>">here</a> to attempt a fix.</p>
+      </div>
+      <script type="text/javascript">
+        jQuery(function($) {
+          $(document).on('click', '.feeder-notice .notice-dismiss', function() {
+            var today = new Date();
+            var expire = new Date();
+            expire.setTime(today.getTime() + 3600000*24); // 1 day
+            document.cookie = 'cdp-feeder-notice-dismissed=1;expires=' + expire.toGMTString();
+          });
+        });
+      </script>
+      <?php
+    }
+  }
 }
