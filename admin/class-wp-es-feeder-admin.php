@@ -125,7 +125,7 @@ class wp_es_feeder_Admin {
    */
   public function sync_errors_notice() {
     global $feeder;
-    if (isset($_COOKIE['cdp-feeder-notice-dismissed'])) return;
+    if (!current_user_can('manage_options') || isset($_COOKIE['cdp-feeder-notice-dismissed'])) return;
     $errors = $feeder->check_sync_errors();
     if ($errors['errors']) { ?>
       <div class="notice notice-error feeder-notice is-dismissible">
