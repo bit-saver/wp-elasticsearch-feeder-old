@@ -127,7 +127,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      */
     public function check_sync_errors() {
       global $wpdb;
-      $result = ['errors' => 0];
+      $result = ['errors' => 0, 'ids' => []];
       $statuses = array(ES_FEEDER_SYNC::ERROR, ES_FEEDER_SYNC::SYNCING, ES_FEEDER_SYNC::SYNC_WHILE_SYNCING);
       $statuses = implode(',', $statuses);
       $query = "SELECT p.ID, p.post_type, p.post_modified, m.meta_value as sync_status FROM $wpdb->posts p LEFT JOIN $wpdb->postmeta m ON p.ID = m.post_id
@@ -140,6 +140,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
           if (!array_key_exists($row->post_type, $result))
             $result[$row->post_type] = 0;
           $result[$row->post_type]++;
+          $result['ids'][] = $row->ID;
         }
       }
       return $result;
@@ -147,20 +148,28 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     /**
      * Triggered via AJAX, clears out old sync data and initiates a new sync process.
+     * If sync_errors is present, we will only initiate a sync for posts with a sync error.
      */
     public function es_initiate_sync() {
       check_admin_referer();
       global $wpdb;
       $wpdb->delete($wpdb->postmeta, array('meta_value' => '_cdp_sync_queue'));
-      $opts = get_option( $this->plugin_name );
-      $post_types = $opts[ 'es_post_types' ];
-      $formats = implode(',', array_fill(0, count($post_types), '%s'));
-      $query = "SELECT p.ID FROM $wpdb->posts p 
-                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m
-                    ON p.ID = m.post_id 
-                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND (m.meta_value IS NULL OR m.meta_value != 'no')";
-      $query = $wpdb->prepare($query, array_keys($post_types));
-      $post_ids = $wpdb->get_col($query);
+      if (isset($_POST['sync_errors']) && $_POST['sync_errors']) {
+        $errors = $this->check_sync_errors();
+        $post_ids = $errors['ids'];
+      } else {
+        $opts = get_option( $this->plugin_name );
+        $post_types = $opts[ 'es_post_types' ];
+        $formats = implode(',', array_fill(0, count($post_types), '%s'));
+        $statuses = implode(',', array(ES_FEEDER_SYNC::SYNCING, ES_FEEDER_SYNC::SYNC_WHILE_SYNCING));
+        $query = "SELECT p.ID FROM $wpdb->posts p 
+                  LEFT JOIN $wpdb->postmeta ms ON p.ID = ms.post_id
+                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m ON p.ID = m.post_id
+                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND (m.meta_value IS NULL OR m.meta_value != 'no') 
+                    AND ms.meta_key = '_cdp_sync_status' AND (ms.meta_value IS NULL OR ms.meta_value NOT IN ($statuses))";
+        $query = $wpdb->prepare($query, array_keys($post_types));
+        $post_ids = $wpdb->get_col($query);
+      }
       if (!count($post_ids)) {
         echo json_encode(array('error' => true, 'message' => 'No posts found.', 'query' => $query));
         exit;
@@ -314,6 +323,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       );
 
       $response = $this->es_request( $options, $callback );
+      file_put_contents(ABSPATH . 'callback.log', print_r($response, 1) . "\r\n", FILE_APPEND);
       if ( !$response ) {
         error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
       }
@@ -360,11 +370,11 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $client = new GuzzleHttp\Client();
 
       // TODO: Investigate alternative methods to accomplish this URL check. The API gets mad since we don't have a GET route for this yet.
-      try {
-        $client->get($request['url'], ['http_errors' => false, 'timeout' => '5']);
-      } catch (GuzzleHttp\Exception\ConnectException $e) {
-        $error = json_encode($e->getHandlerContext());
-      }
+//      try {
+//        $client->get($request['url'], ['http_errors' => false, 'timeout' => '5']);
+//      } catch (GuzzleHttp\Exception\ConnectException $e) {
+//        $error = json_encode($e->getHandlerContext());
+//      }
 
       if ( isset($error) ){
         $results = $error;
