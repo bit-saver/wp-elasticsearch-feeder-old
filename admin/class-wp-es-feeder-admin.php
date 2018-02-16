@@ -160,4 +160,9 @@ class wp_es_feeder_Admin {
       $feeder->sync_status_indicator($status);
     }
   }
+
+  public function sortable_columns( $columns ) {
+    $columns['sync_status'] = '_cdp_sync_status';
+    return $columns;
+  }
 }

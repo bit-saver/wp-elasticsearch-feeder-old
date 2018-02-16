@@ -54,6 +54,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       // add sync status to list tables
       $this->loader->add_filter('manage_posts_columns', $plugin_admin, 'columns_head');
       $this->loader->add_action('manage_posts_custom_column', $plugin_admin, 'columns_content', 10, 2);
+      foreach( $this->get_allowed_post_types() as $post_type ) {
+        $this->loader->add_filter('manage_edit-' . $post_type . '_sortable_columns', $plugin_admin, 'sortable_columns');
+      }
 
       // elasticsearch indexing hook actions
       add_action( 'save_post', array( $this, 'save_post' ), 10, 2 );
