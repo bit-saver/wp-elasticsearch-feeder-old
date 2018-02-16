@@ -129,30 +129,22 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * Then return the status.
      *
      * @param $post_id
-     * @param $post_modified - Current post modified date
      * @param $status - Current sync status
      * @return int
      */
-    public function get_sync_status($post_id, $post_modified = null, $status = null) {
-      global $wpdb;
+    public function get_sync_status($post_id, $status = null) {
       if (!$status)
         $status = get_post_meta($post_id, '_cdp_sync_status', true);
       if ($status != ES_FEEDER_SYNC::ERROR && !ES_FEEDER_SYNC::sync_allowed($status)) {
-        // check to see if we should resolve to error based on time since postmodified
-        if ($post_modified)
-          $modified_time = strtotime($post_modified);
-        else {
-          $query = "SELECT post_modified FROM $wpdb->posts WHERE ID = $post_id";
-          $post_modified = $wpdb->get_var($query);
-          if ($post_modified)
-            $modified_time = strtotime($post_modified);
-          else
-            $modified_time = strtotime('now');
-        }
-        $diff = (int) abs($modified_time - strtotime('now'));
+        // check to see if we should resolve to error based on time since last sync
+        $last_sync = get_post_meta($post_id, '_cdp_last_sync', true);
+        if ($last_sync)
+            $last_sync = strtotime($last_sync);
+        else
+            $last_sync = strtotime('now');
+        $diff = (int) abs($last_sync - strtotime('now'));
         $diff = $diff / 1000 / 60;
         if ($diff >= ES_API_HELPER::SYNC_TIMEOUT) {
-          file_put_contents(ABSPATH . 'sync_status.log', "post_modified: " . ($post_modified ? 'true' : 'false') . ' ' . date('m/d/Y G:i:s', $modified_time) . " " . date('m/d/Y G:i:s') . " $diff\r\n", FILE_APPEND);
           $status = ES_FEEDER_SYNC::ERROR;
           update_post_meta($post_id, '_cdp_sync_status', $status);
         }
@@ -170,11 +162,11 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $result = ['errors' => 0, 'ids' => []];
       $statuses = array(ES_FEEDER_SYNC::ERROR, ES_FEEDER_SYNC::SYNCING, ES_FEEDER_SYNC::SYNC_WHILE_SYNCING);
       $statuses = implode(',', $statuses);
-      $query = "SELECT p.ID, p.post_type, p.post_modified, m.meta_value as sync_status FROM $wpdb->posts p LEFT JOIN $wpdb->postmeta m ON p.ID = m.post_id
+      $query = "SELECT p.ID, p.post_type, m.meta_value as sync_status FROM $wpdb->posts p LEFT JOIN $wpdb->postmeta m ON p.ID = m.post_id
                   WHERE m.meta_key = '_cdp_sync_status' AND m.meta_value IN ($statuses)";
       $rows = $wpdb->get_results($query);
       foreach ($rows as $row) {
-        $status = $this->get_sync_status($row->ID, $row->post_modified, $row->sync_status);
+        $status = $this->get_sync_status($row->ID, $row->sync_status);
         if ($status == ES_FEEDER_SYNC::ERROR) {
           $result['errors']++;
           if (!array_key_exists($row->post_type, $result))
@@ -238,6 +230,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         exit;
       }
       update_post_meta($post_id, '_cdp_sync_queue', "0");
+      update_post_meta($post_id, '_cdp_last_sync', date('Y-m-d H:i:s'));
       $post = get_post($post_id);
       $resp = $this->addOrUpdate($post, false);
       $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
@@ -354,6 +347,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $callback = get_rest_url(null, ES_API_HELPER::NAME_SPACE . '/callback/' . $uid);
       update_post_meta($post->ID, '_cdp_sync_uid', $uid);
       update_post_meta($post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::SYNCING);
+      update_post_meta($post->ID, '_cdp_last_sync', date('Y-m-d H:i:s'));
 
       $options = array(
         'url' => $config[ 'es_url' ] . '/' . $post->post_type,
