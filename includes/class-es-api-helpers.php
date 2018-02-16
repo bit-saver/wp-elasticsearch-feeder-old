@@ -5,7 +5,7 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
 
     const PLUGIN_NAME = 'wp-es-feeder';
     const NAME_SPACE = 'elasticsearch/v1';
-    const SYNC_TIMEOUT = 5; // minutes
+    const SYNC_TIMEOUT = 10; // minutes
 
     public static function get_post_type_label($post_type = 'post', $display = 'name') {
       $obj = get_post_type_object($post_type);

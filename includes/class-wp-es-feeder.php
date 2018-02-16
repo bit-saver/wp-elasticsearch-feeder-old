@@ -51,6 +51,10 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       // admin notices
       $this->loader->add_action('admin_notices', $plugin_admin, 'sync_errors_notice');
 
+      // add sync status to list tables
+      $this->loader->add_filter('manage_posts_columns', $plugin_admin, 'columns_head');
+      $this->loader->add_action('manage_posts_custom_column', $plugin_admin, 'columns_content', 10, 2);
+
       // elasticsearch indexing hook actions
       add_action( 'save_post', array( $this, 'save_post' ), 10, 2 );
       add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );
@@ -87,8 +91,35 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     public function display_sync_status() {
       $post_id = $_POST['post_id'];
       $status = $this->get_sync_status($post_id);
-      echo ES_FEEDER_SYNC::display($status);
+      $this->sync_status_indicator($status);
       exit;
+    }
+
+    /**
+     * Prints the appropriately colored sync status indicator dot given a status.
+     *
+     * @param $status
+     */
+    public function sync_status_indicator($status) {
+      $color = 'black';
+      switch ( $status ) {
+        case ES_FEEDER_SYNC::SYNCING:
+        case ES_FEEDER_SYNC::SYNC_WHILE_SYNCING:
+          $color = 'yellow';
+          break;
+        case ES_FEEDER_SYNC::SYNCED:
+          $color = 'green';
+          break;
+        case ES_FEEDER_SYNC::RESYNC:
+          $color = 'orange';
+          break;
+        case ES_FEEDER_SYNC::ERROR:
+          $color = 'red';
+          break;
+      }
+      ?>
+      <div class="sync-status sync-status-<?=$color?>" title="<?=ES_FEEDER_SYNC::display($status)?>"></div>
+      <?php
     }
 
     /**
@@ -103,16 +134,25 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * @return int
      */
     public function get_sync_status($post_id, $post_modified = null, $status = null) {
+      global $wpdb;
       if (!$status)
         $status = get_post_meta($post_id, '_cdp_sync_status', true);
       if ($status != ES_FEEDER_SYNC::ERROR && !ES_FEEDER_SYNC::sync_allowed($status)) {
-        if ($post_modified)
-          $modified_time = get_the_modified_time('U', $post_id);
-        else
-          $modified_time = mysql2date('U', $post_modified, false);;
         // check to see if we should resolve to error based on time since postmodified
-        $diff = round(((int) abs($modified_time - time())) / 60);
+        if ($post_modified)
+          $modified_time = strtotime($post_modified);
+        else {
+          $query = "SELECT post_modified FROM $wpdb->posts WHERE ID = $post_id";
+          $post_modified = $wpdb->get_var($query);
+          if ($post_modified)
+            $modified_time = strtotime($post_modified);
+          else
+            $modified_time = strtotime('now');
+        }
+        $diff = (int) abs($modified_time - strtotime('now'));
+        $diff = $diff / 1000 / 60;
         if ($diff >= ES_API_HELPER::SYNC_TIMEOUT) {
+          file_put_contents(ABSPATH . 'sync_status.log', "post_modified: " . ($post_modified ? 'true' : 'false') . ' ' . date('m/d/Y G:i:s', $modified_time) . " " . date('m/d/Y G:i:s') . " $diff\r\n", FILE_APPEND);
           $status = ES_FEEDER_SYNC::ERROR;
           update_post_meta($post_id, '_cdp_sync_status', $status);
         }
@@ -422,6 +462,15 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       }
 
       return $body;
+    }
+
+    public function get_allowed_post_types() {
+      $settings  = get_option( $this->plugin_name );
+      $types = [];
+      if ($settings && $settings['es_post_types'])
+        foreach ($settings['es_post_types'] as $post_type => $val)
+          if ($val) $types[] = $post_type;
+      return $types;
     }
 
     /**

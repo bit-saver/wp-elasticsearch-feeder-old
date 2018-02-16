@@ -76,6 +76,7 @@ class wp_es_feeder_Admin {
   }
 
   function index_to_cdp_display($post) {
+    global $feeder;
     include_once( 'partials/wp-es-feeder-index-to-cdp-display.php' );
   }
 
@@ -142,6 +143,21 @@ class wp_es_feeder_Admin {
         });
       </script>
       <?php
+    }
+  }
+
+  public function columns_head( $defaults ) {
+    global $feeder;
+    if (in_array(get_post_type(), $feeder->get_allowed_post_types()))
+        $defaults[ 'sync_status' ] = 'Sync Status';
+    return $defaults;
+  }
+
+  public function columns_content( $column_name, $post_ID ) {
+    global $feeder;
+    if ( $column_name == 'sync_status' ) {
+      $status = get_post_meta( $post_ID,'_cdp_sync_status', true );
+      $feeder->sync_status_indicator($status);
     }
   }
 }

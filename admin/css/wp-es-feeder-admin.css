@@ -84,3 +84,32 @@
      0% { width: 0; }
      /*100% { width: auto; }*/
  }
+
+ #cdp_sync_status {
+     display: inline-block;
+     margin-bottom: -5px;
+ }
+
+ .sync-status {
+     border-radius: 100%;
+     height: 16px;
+     width: 16px;
+     background-color: #000;
+     border: 1px solid gray;
+ }
+
+ .sync-status-red {
+     background-color: #e33637;
+ }
+
+ .sync-status-orange {
+     background-color: #f37644;
+ }
+
+ .sync-status-yellow {
+     background-color: #f7ce33;
+ }
+
+ .sync-status-green {
+     background-color: #2abc51;
+ }
