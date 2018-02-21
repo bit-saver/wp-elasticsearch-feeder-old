@@ -48,12 +48,22 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       // save/update our plugin options
       $this->loader->add_action( 'admin_init', $plugin_admin, 'options_update' );
 
+      // admin notices
+      $this->loader->add_action('admin_notices', $plugin_admin, 'sync_errors_notice');
+
+      // add sync status to list tables
+      $this->loader->add_filter('manage_posts_columns', $plugin_admin, 'columns_head');
+      $this->loader->add_action('manage_posts_custom_column', $plugin_admin, 'columns_content', 10, 2);
+      foreach( $this->get_allowed_post_types() as $post_type ) {
+        $this->loader->add_filter('manage_edit-' . $post_type . '_sortable_columns', $plugin_admin, 'sortable_columns');
+      }
+
       // elasticsearch indexing hook actions
       add_action( 'save_post', array( $this, 'save_post' ), 10, 2 );
       add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );
       add_action( 'trash_post', array( &$this, 'delete_post' ) );
       add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
-      add_action( 'wp_ajax_es_sync_status', array($this, 'get_sync_status') );
+      add_action( 'wp_ajax_es_sync_status', array($this, 'display_sync_status') );
       add_action( 'wp_ajax_es_initiate_sync', array($this, 'es_initiate_sync') );
       add_action( 'wp_ajax_es_process_next', array($this, 'es_process_next') );
     }
@@ -79,31 +89,122 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     /**
-     * Triggered via AJAX, retreives a post's sync status for display.
+     * Triggered via AJAX, displays a post's sync status.
      */
-    public function get_sync_status() {
+    public function display_sync_status() {
       $post_id = $_POST['post_id'];
-      $status = get_post_meta($post_id, '_cdp_sync_status', true);
-      echo ES_FEEDER_SYNC::display($status);
+      $status = $this->get_sync_status($post_id);
+      $this->sync_status_indicator($status);
       exit;
     }
 
     /**
+     * Prints the appropriately colored sync status indicator dot given a status.
+     *
+     * @param $status
+     */
+    public function sync_status_indicator($status) {
+      $color = 'black';
+      switch ( $status ) {
+        case ES_FEEDER_SYNC::SYNCING:
+        case ES_FEEDER_SYNC::SYNC_WHILE_SYNCING:
+          $color = 'yellow';
+          break;
+        case ES_FEEDER_SYNC::SYNCED:
+          $color = 'green';
+          break;
+        case ES_FEEDER_SYNC::RESYNC:
+          $color = 'orange';
+          break;
+        case ES_FEEDER_SYNC::ERROR:
+          $color = 'red';
+          break;
+      }
+      ?>
+      <div class="sync-status sync-status-<?=$color?>" title="<?=ES_FEEDER_SYNC::display($status)?>"></div>
+      <?php
+    }
+
+    /**
+     * Check to see how long a post has been syncing and update to
+     * error status if it's been longer than SYNC_TIMEOUT.
+     * Post modified and sync status can be supplied to save a database query or two.
+     * Then return the status.
+     *
+     * @param $post_id
+     * @param $status - Current sync status
+     * @return int
+     */
+    public function get_sync_status($post_id, $status = null) {
+      if (!$status)
+        $status = get_post_meta($post_id, '_cdp_sync_status', true);
+      if ($status != ES_FEEDER_SYNC::ERROR && !ES_FEEDER_SYNC::sync_allowed($status)) {
+        // check to see if we should resolve to error based on time since last sync
+        $last_sync = get_post_meta($post_id, '_cdp_last_sync', true);
+        if ($last_sync)
+            $last_sync = new DateTime($last_sync);
+        else
+            $last_sync = new DateTime('now');
+        $interval = date_diff($last_sync, new DateTime('now'));
+        $diff = $interval->format('%i');
+        if ($diff >= ES_API_HELPER::SYNC_TIMEOUT) {
+          $status = ES_FEEDER_SYNC::ERROR;
+          update_post_meta($post_id, '_cdp_sync_status', $status);
+        }
+      }
+      return $status;
+    }
+
+    /**
+     * Iterate over posts in a syncing or erroneous state. If syncing for longer than
+     * the SYNC_TIMEOUT time, escalate to error status.
+     * Return stats on total errors (if any).
+     */
+    public function check_sync_errors() {
+      global $wpdb;
+      $result = ['errors' => 0, 'ids' => []];
+      $statuses = array(ES_FEEDER_SYNC::ERROR, ES_FEEDER_SYNC::SYNCING, ES_FEEDER_SYNC::SYNC_WHILE_SYNCING);
+      $statuses = implode(',', $statuses);
+      $query = "SELECT p.ID, p.post_type, m.meta_value as sync_status FROM $wpdb->posts p LEFT JOIN $wpdb->postmeta m ON p.ID = m.post_id
+                  WHERE m.meta_key = '_cdp_sync_status' AND m.meta_value IN ($statuses)";
+      $rows = $wpdb->get_results($query);
+      foreach ($rows as $row) {
+        $status = $this->get_sync_status($row->ID, $row->sync_status);
+        if ($status == ES_FEEDER_SYNC::ERROR) {
+          $result['errors']++;
+          if (!array_key_exists($row->post_type, $result))
+            $result[$row->post_type] = 0;
+          $result[$row->post_type]++;
+          $result['ids'][] = $row->ID;
+        }
+      }
+      return $result;
+    }
+
+    /**
      * Triggered via AJAX, clears out old sync data and initiates a new sync process.
+     * If sync_errors is present, we will only initiate a sync for posts with a sync error.
      */
     public function es_initiate_sync() {
       check_admin_referer();
       global $wpdb;
       $wpdb->delete($wpdb->postmeta, array('meta_value' => '_cdp_sync_queue'));
-      $opts = get_option( $this->plugin_name );
-      $post_types = $opts[ 'es_post_types' ];
-      $formats = implode(',', array_fill(0, count($post_types), '%s'));
-      $query = "SELECT p.ID FROM $wpdb->posts p 
-                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m
-                    ON p.ID = m.post_id 
-                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND (m.meta_value IS NULL OR m.meta_value != 'no')";
-      $query = $wpdb->prepare($query, array_keys($post_types));
-      $post_ids = $wpdb->get_col($query);
+      if (isset($_POST['sync_errors']) && $_POST['sync_errors']) {
+        $errors = $this->check_sync_errors();
+        $post_ids = $errors['ids'];
+      } else {
+        $opts = get_option( $this->plugin_name );
+        $post_types = $opts[ 'es_post_types' ];
+        $formats = implode(',', array_fill(0, count($post_types), '%s'));
+        $statuses = implode(',', array(ES_FEEDER_SYNC::SYNCING, ES_FEEDER_SYNC::SYNC_WHILE_SYNCING));
+        $query = "SELECT p.ID FROM $wpdb->posts p 
+                  LEFT JOIN $wpdb->postmeta ms ON p.ID = ms.post_id
+                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m ON p.ID = m.post_id
+                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND (m.meta_value IS NULL OR m.meta_value != 'no') 
+                    AND ms.meta_key = '_cdp_sync_status' AND (ms.meta_value IS NULL OR ms.meta_value NOT IN ($statuses))";
+        $query = $wpdb->prepare($query, array_keys($post_types));
+        $post_ids = $wpdb->get_col($query);
+      }
       if (!count($post_ids)) {
         echo json_encode(array('error' => true, 'message' => 'No posts found.', 'query' => $query));
         exit;
@@ -132,6 +233,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         exit;
       }
       update_post_meta($post_id, '_cdp_sync_queue', "0");
+      update_post_meta($post_id, '_cdp_last_sync', date('Y-m-d H:i:s'));
       $post = get_post($post_id);
       $resp = $this->addOrUpdate($post, false);
       $query = "SELECT COUNT(*) as total, SUM(meta_value) as incomplete FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue'";
@@ -248,6 +350,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $callback = get_rest_url(null, ES_API_HELPER::NAME_SPACE . '/callback/' . $uid);
       update_post_meta($post->ID, '_cdp_sync_uid', $uid);
       update_post_meta($post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::SYNCING);
+      update_post_meta($post->ID, '_cdp_last_sync', date('Y-m-d H:i:s'));
 
       $options = array(
         'url' => $config[ 'es_url' ] . '/' . $post->post_type,
@@ -257,6 +360,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       );
 
       $response = $this->es_request( $options, $callback );
+      file_put_contents(ABSPATH . 'callback.log', print_r($response, 1) . "\r\n", FILE_APPEND);
       if ( !$response ) {
         error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
       }
@@ -269,21 +373,17 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $opt = get_option( $this->plugin_name );
 
       $uuid = $this->get_uuid($post);
-      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type;
+      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type . '/' . $uuid;
 
       $options = array(
          'url' => $delete_url,
          'method' => 'DELETE',
-         'body' => array(
-           'post_id' => $post->ID,
-           'type' => $post->post_type,
-           'site' => $this->get_site()
-         ),
          'print' => false
       );
 
       $response = $this->es_request( $options );
-      if (!isset($response['error']) || !$response['error']) {
+      if ((is_array($response) && (!isset($response['error']) || !$response['error']))
+            || (is_object($response) && (!isset($repsonse->error) || !$response->error))) {
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::NOT_SYNCED );
         delete_post_meta( $post->ID, '_cdp_sync_uid' );
       }
@@ -291,6 +391,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     public function es_request($request, $callback = null) {
       $is_internal = false;
+      $error = false;
+      $results = null;
+
       if (!$request) {
         $request = $_POST['data'];
       } else {
@@ -301,17 +404,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       if ($callback) $headers['callback'] = $callback;
 
       $client = new GuzzleHttp\Client();
-
-      // TODO: Investigate alternative methods to accomplish this URL check. The API gets mad since we don't have a GET route for this yet.
       try {
-        $client->get($request['url'], ['http_errors' => false, 'timeout' => '5']);
-      } catch (GuzzleHttp\Exception\ConnectException $e) {
-        $error = json_encode($e->getHandlerContext());
-      }
-
-      if ( isset($error) ){
-        $results = $error;
-      } else {
         // if a body is provided
         if ( isset($request['body']) ) {
           // unwrap the post data from ajax call
@@ -324,16 +417,35 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
           $body = $this->is_domain_mapped($body);
 
-          $response = $client->request($request['method'], $request['url'], ['body' => $body, 'http_errors' => false, 'headers' => $headers]);
+          $response = $client->request($request['method'], $request['url'], ['body' => $body, 'http_errors' => false, 'headers' => $headers, 'timeout' => 30]);
         } else {
-          $response = $client->request($request['method'], $request['url'], ['http_errors' => false, 'headers' => $headers]);
+          $response = $client->request($request['method'], $request['url'], ['http_errors' => false, 'headers' => $headers, 'timeout' => 30]);
         }
 
         $body = $response->getBody();
         $results = $body->getContents();
+      } catch (GuzzleHttp\Exception\ConnectException $e) {
+        $error = $e->getMessage();
+      } catch (GuzzleHttp\Exception\RequestException $e) {
+        $error = $e->getMessage();
+      } catch (Exception $e) {
+        $error = $e->getMessage();
       }
 
-      if ($is_internal || (isset($request['print']) && !$request['print'])) {
+      if ($error) {
+        if ($is_internal || (isset($request['print']) && !$request['print'])) {
+          return (object) array(
+            'error' => 1,
+            'message' => $error
+          );
+        } else {
+          wp_send_json(array(
+            'error' => 1,
+            'message' => $error
+          ));
+          return null;
+        }
+      } else if ($is_internal || (isset($request['print']) && !$request['print'])) {
         return json_decode($results);
       } else {
         wp_send_json(json_decode($results));
@@ -355,6 +467,15 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       }
 
       return $body;
+    }
+
+    public function get_allowed_post_types() {
+      $settings  = get_option( $this->plugin_name );
+      $types = [];
+      if ($settings && $settings['es_post_types'])
+        foreach ($settings['es_post_types'] as $post_type => $val)
+          if ($val) $types[] = $post_type;
+      return $types;
     }
 
     /**

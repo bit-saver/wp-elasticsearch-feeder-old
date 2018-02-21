@@ -20,7 +20,7 @@
 <label for="index_cdp_no">No</label>
 
 <div style="margin-top: 6px;">
-    Sync Status: <span id="cdp_sync_status"><?=ES_FEEDER_SYNC::display($sync);?></span>
+    Sync Status: <div id="cdp_sync_status" style="display: inline-block;"><?php $feeder->sync_status_indicator($sync);?></div>
 </div>
 <script type="text/javascript">
     jQuery(function($) {
@@ -35,7 +35,7 @@
           },
           success: function (result) {
             $('#cdp_sync_status').html(result);
-            setTimeout(getSyncStatus, 3000);
+            setTimeout(getSyncStatus, 1000);
           }
         });
       }

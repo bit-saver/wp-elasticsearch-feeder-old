@@ -76,6 +76,7 @@ class wp_es_feeder_Admin {
   }
 
   function index_to_cdp_display($post) {
+    global $feeder;
     include_once( 'partials/wp-es-feeder-index-to-cdp-display.php' );
   }
 
@@ -117,5 +118,51 @@ class wp_es_feeder_Admin {
        $this,
       'validate'
     ) );
+  }
+
+  /**
+   * Checks for sync errors and displays an admin notice if there are errors and the notice
+   * wasn't dismissed in the last 24 hours.
+   */
+  public function sync_errors_notice() {
+    global $feeder;
+    if (!current_user_can('manage_options') || isset($_COOKIE['cdp-feeder-notice-dismissed'])) return;
+    $errors = $feeder->check_sync_errors();
+    if ($errors['errors']) { ?>
+      <div class="notice notice-error feeder-notice is-dismissible">
+        <p>WP ES Feeder has enountered <?=$errors['errors']?> error(s). Click <a href="<?=admin_url('options-general.php?page=wp-es-feeder')?>">here</a> to attempt a fix.</p>
+      </div>
+      <script type="text/javascript">
+        jQuery(function($) {
+          $(document).on('click', '.feeder-notice .notice-dismiss', function() {
+            var today = new Date();
+            var expire = new Date();
+            expire.setTime(today.getTime() + 3600000*24); // 1 day
+            document.cookie = 'cdp-feeder-notice-dismissed=1;expires=' + expire.toGMTString();
+          });
+        });
+      </script>
+      <?php
+    }
+  }
+
+  public function columns_head( $defaults ) {
+    global $feeder;
+    if (in_array(get_post_type(), $feeder->get_allowed_post_types()))
+        $defaults[ 'sync_status' ] = 'Sync Status';
+    return $defaults;
+  }
+
+  public function columns_content( $column_name, $post_ID ) {
+    global $feeder;
+    if ( $column_name == 'sync_status' ) {
+      $status = get_post_meta( $post_ID,'_cdp_sync_status', true );
+      $feeder->sync_status_indicator($status);
+    }
+  }
+
+  public function sortable_columns( $columns ) {
+    $columns['sync_status'] = '_cdp_sync_status';
+    return $columns;
   }
 }
