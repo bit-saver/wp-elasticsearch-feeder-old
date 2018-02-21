@@ -414,9 +414,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
           $body = $this->is_domain_mapped($body);
 
-          $response = $client->request($request['method'], $request['url'], ['body' => $body, 'http_errors' => false, 'headers' => $headers]);
+          $response = $client->request($request['method'], $request['url'], ['body' => $body, 'http_errors' => false, 'headers' => $headers, 'timeout' => 30]);
         } else {
-          $response = $client->request($request['method'], $request['url'], ['http_errors' => false, 'headers' => $headers]);
+          $response = $client->request($request['method'], $request['url'], ['http_errors' => false, 'headers' => $headers, 'timeout' => 30]);
         }
 
         $body = $response->getBody();
