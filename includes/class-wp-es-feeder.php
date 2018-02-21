@@ -391,6 +391,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     public function es_request($request, $callback = null) {
       $is_internal = false;
+      $error = false;
+      $results = null;
+
       if (!$request) {
         $request = $_POST['data'];
       } else {
@@ -422,23 +425,27 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $body = $response->getBody();
         $results = $body->getContents();
       } catch (GuzzleHttp\Exception\ConnectException $e) {
-        return (object) array(
-          'error' => 1,
-          'message' => $e->getMessage()
-        );
+        $error = $e->getMessage();
       } catch (GuzzleHttp\Exception\RequestException $e) {
-        return (object) array(
-          'error' => 1,
-          'message' => $e->getMessage()
-        );
+        $error = $e->getMessage();
       } catch (Exception $e) {
-        return (object) array(
-          'error' => 1,
-          'message' => $e->getMessage()
-        );
+        $error = $e->getMessage();
       }
 
-      if ($is_internal || (isset($request['print']) && !$request['print'])) {
+      if ($error) {
+        if ($is_internal || (isset($request['print']) && !$request['print'])) {
+          return (object) array(
+            'error' => 1,
+            'message' => $error
+          );
+        } else {
+          wp_send_json(array(
+            'error' => 1,
+            'message' => $error
+          ));
+          return null;
+        }
+      } else if ($is_internal || (isset($request['print']) && !$request['print'])) {
         return json_decode($results);
       } else {
         wp_send_json(json_decode($results));
