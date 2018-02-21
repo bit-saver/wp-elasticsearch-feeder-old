@@ -22,22 +22,3 @@
 <div style="margin-top: 6px;">
     Sync Status: <div id="cdp_sync_status" style="display: inline-block;"><?php $feeder->sync_status_indicator($sync);?></div>
 </div>
-<script type="text/javascript">
-    jQuery(function($) {
-      getSyncStatus();
-      function getSyncStatus() {
-        $.ajax({
-          url: ajaxurl,
-          type: 'POST',
-          data: {
-            action: 'es_sync_status',
-            post_id: <?=$post->ID?>
-          },
-          success: function (result) {
-            $('#cdp_sync_status').html(result);
-            setTimeout(getSyncStatus, 1000);
-          }
-        });
-      }
-    });
-</script>
