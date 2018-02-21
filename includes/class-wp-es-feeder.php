@@ -401,17 +401,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       if ($callback) $headers['callback'] = $callback;
 
       $client = new GuzzleHttp\Client();
-
-      // TODO: Investigate alternative methods to accomplish this URL check. The API gets mad since we don't have a GET route for this yet.
-//      try {
-//        $client->get($request['url'], ['http_errors' => false, 'timeout' => '5']);
-//      } catch (GuzzleHttp\Exception\ConnectException $e) {
-//        $error = json_encode($e->getHandlerContext());
-//      }
-
-      if ( isset($error) ){
-        $results = $error;
-      } else {
+      try {
         // if a body is provided
         if ( isset($request['body']) ) {
           // unwrap the post data from ajax call
@@ -431,6 +421,21 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
         $body = $response->getBody();
         $results = $body->getContents();
+      } catch (GuzzleHttp\Exception\ConnectException $e) {
+        return (object) array(
+          'error' => 1,
+          'message' => $e->getMessage()
+        );
+      } catch (GuzzleHttp\Exception\RequestException $e) {
+        return (object) array(
+          'error' => 1,
+          'message' => $e->getMessage()
+        );
+      } catch (Exception $e) {
+        return (object) array(
+          'error' => 1,
+          'message' => $e->getMessage()
+        );
       }
 
       if ($is_internal || (isset($request['print']) && !$request['print'])) {
