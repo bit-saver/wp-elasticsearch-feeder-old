@@ -414,7 +414,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $is_internal = true;
         $config = get_option( $this->plugin_name );
         $opts['base_uri'] = trim($config['es_url'], '/') . '/';
-        file_put_contents(ABSPATH . 'es_request.log', print_r($opts, 1) . "\r\n", FILE_APPEND);
+//        file_put_contents(ABSPATH . 'es_request.log', print_r($opts, 1) . "\r\n", FILE_APPEND);
       }
 
 
@@ -447,9 +447,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $error = $e->getMessage();
       }
 
-      file_put_contents(ABSPATH . 'es_request.log', print_r($request, 1) . "\r\n", FILE_APPEND);
-      file_put_contents(ABSPATH . 'es_request.log', print_r($results, 1) . "\r\n", FILE_APPEND);
-      file_put_contents(ABSPATH . 'es_request.log', print_r($error, 1) . "\r\n", FILE_APPEND);
+//      file_put_contents(ABSPATH . 'es_request.log', print_r($request, 1) . "\r\n", FILE_APPEND);
+//      file_put_contents(ABSPATH . 'es_request.log', print_r($results, 1) . "\r\n", FILE_APPEND);
+//      file_put_contents(ABSPATH . 'es_request.log', print_r($error, 1) . "\r\n", FILE_APPEND);
 
       if ($error) {
         if ($is_internal || (isset($request['print']) && !$request['print'])) {
