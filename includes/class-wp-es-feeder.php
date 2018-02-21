@@ -373,21 +373,17 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $opt = get_option( $this->plugin_name );
 
       $uuid = $this->get_uuid($post);
-      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type;
+      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type . '/' . $uuid;
 
       $options = array(
          'url' => $delete_url,
          'method' => 'DELETE',
-         'body' => array(
-           'post_id' => $post->ID,
-           'type' => $post->post_type,
-           'site' => $this->get_site()
-         ),
          'print' => false
       );
 
       $response = $this->es_request( $options );
-      if (!isset($response['error']) || !$response['error']) {
+      if ((is_array($response) && (!isset($response['error']) || !$response['error']))
+            || (is_object($response) && (!isset($repsonse->error) || !$response->error))) {
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::NOT_SYNCED );
         delete_post_meta( $post->ID, '_cdp_sync_uid' );
       }
