@@ -505,8 +505,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $host = $args['host'];
       else
         $host = str_ireplace('https://', '', str_ireplace('http://', '', $host));
-
-      $host = str_replace('.', '-', $host);
+      
       return "{$host}_{$post->ID}";
     }
 
