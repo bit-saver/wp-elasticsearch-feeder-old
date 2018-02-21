@@ -24,7 +24,8 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     private function load_dependencies() {
-      require_once plugin_dir_path( dirname( __FILE__ ) ) . 'vendor/autoload.php';
+      if (!class_exists('GuzzleHttp\Client'))
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'vendor/autoload.php';
       require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wp-es-feeder-loader.php';
       require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-wp-es-feeder-admin.php';
       $this->loader = new wp_es_feeder_Loader();
