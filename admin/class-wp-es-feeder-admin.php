@@ -15,8 +15,8 @@ class wp_es_feeder_Admin {
       array(), $this->version, 'all' );
   }
 
-  public function enqueue_scripts() {
-    global $wpdb;
+  public function enqueue_scripts($hook) {
+    global $wpdb, $post, $feeder;
 
     wp_register_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder-admin.js',
       array( 'jquery' ), false, false );
@@ -35,6 +35,15 @@ class wp_es_feeder_Admin {
     }
     wp_localize_script($this->plugin_name, 'es_feeder_sync', $sync);
     wp_enqueue_script($this->plugin_name);
+
+
+    if ( $hook == 'post.php' && in_array($post->post_type, $feeder->get_allowed_post_types()) ) {
+      $handle = $this->plugin_name . '-sync-status';
+      wp_register_script( $handle, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder-admin-post.js',
+        array( 'jquery' ), false, false );
+      wp_localize_script($handle, 'es_feeder_sync_status_post_id', $post->ID);
+      wp_enqueue_script($handle);
+    }
   }
 
   // Register the administration menu

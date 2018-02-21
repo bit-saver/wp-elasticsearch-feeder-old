@@ -34,7 +34,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     private function define_admin_hooks() {
       $plugin_admin = new wp_es_feeder_Admin( $this->get_plugin_name(), $this->get_version() );
       $this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
-      $this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+      $this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts', 10, 1 );
 
       // add menu item
       $this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_admin_menu' );
@@ -64,9 +64,10 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );
       add_action( 'trash_post', array( &$this, 'delete_post' ) );
       add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
-      add_action( 'wp_ajax_es_sync_status', array($this, 'display_sync_status') );
       add_action( 'wp_ajax_es_initiate_sync', array($this, 'es_initiate_sync') );
       add_action( 'wp_ajax_es_process_next', array($this, 'es_process_next') );
+
+      add_filter( 'heartbeat_received', array($this, 'heartbeat'), 10, 2 );
     }
 
     public function run() {
@@ -90,13 +91,23 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     /**
-     * Triggered via AJAX, displays a post's sync status.
+     * Triggerd by heartbeat AJAX event, added the sync status indicator HTML
+     * if the data includes es_sync_status which contains a post ID and will be
+     * converted to the sync status indicator HTML.
+     *
+     * @param $response
+     * @param $data
+     * @return mixed
      */
-    public function display_sync_status() {
-      $post_id = $_POST['post_id'];
+    public function heartbeat($response, $data) {
+      if ( empty( $data['es_sync_status'] ) )
+        return $response;
+      $post_id = $data['es_sync_status'];
       $status = $this->get_sync_status($post_id);
+      ob_start();
       $this->sync_status_indicator($status);
-      exit;
+      $response['es_sync_status'] = ob_get_clean();
+      return $response;
     }
 
     /**
