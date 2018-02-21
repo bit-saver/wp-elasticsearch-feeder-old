@@ -142,11 +142,11 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         // check to see if we should resolve to error based on time since last sync
         $last_sync = get_post_meta($post_id, '_cdp_last_sync', true);
         if ($last_sync)
-            $last_sync = strtotime($last_sync);
+            $last_sync = new DateTime($last_sync);
         else
-            $last_sync = strtotime('now');
-        $diff = (int) abs($last_sync - strtotime('now'));
-        $diff = $diff / 1000 / 60;
+            $last_sync = new DateTime('now');
+        $interval = date_diff($last_sync, new DateTime('now'));
+        $diff = $interval->format('%i');
         if ($diff >= ES_API_HELPER::SYNC_TIMEOUT) {
           $status = ES_FEEDER_SYNC::ERROR;
           update_post_meta($post_id, '_cdp_sync_status', $status);
