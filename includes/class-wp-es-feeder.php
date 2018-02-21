@@ -334,8 +334,6 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       // plural form of post type
       $post_type_name = ES_API_HELPER::get_post_type_label( $post->post_type, 'name' );
-      // settings and configuration for plugin
-      $config = get_option( $this->plugin_name );
 
       // api endpoint for wp-json
       $wp_api_url = '/'.ES_API_HELPER::NAME_SPACE.'/'.rawurlencode($post_type_name).'/'.$post->ID;
@@ -365,7 +363,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       update_post_meta($post->ID, '_cdp_last_sync', date('Y-m-d H:i:s'));
 
       $options = array(
-        'url' => $config[ 'es_url' ] . '/' . $post->post_type,
+        'url' => $post->post_type,
         'method' => 'POST',
         'body' => $api_response,
         'print' => $print
@@ -382,10 +380,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     public function delete( $post ) {
       if ( !$this->is_syncable( $post ) ) return;
-      $opt = get_option( $this->plugin_name );
 
       $uuid = $this->get_uuid($post);
-      $delete_url = $opt[ 'es_url' ] . '/' . $post->post_type . '/' . $uuid;
+      $delete_url = $post->post_type . '/' . $uuid;
 
       $options = array(
          'url' => $delete_url,
@@ -406,16 +403,22 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $error = false;
       $results = null;
 
+      $headers = [];
+      if ($callback) $headers['callback'] = $callback;
+
+      $opts = ['timeout' => 30, 'http_errors' => false];
+
       if (!$request) {
         $request = $_POST['data'];
       } else {
         $is_internal = true;
+        $config = get_option( $this->plugin_name );
+        $opts['base_uri'] = trim($config['es_url'], '/') . '/';
+        file_put_contents(ABSPATH . 'es_request.log', print_r($opts, 1) . "\r\n", FILE_APPEND);
       }
 
-      $headers = [];
-      if ($callback) $headers['callback'] = $callback;
 
-      $client = new GuzzleHttp\Client();
+      $client = new GuzzleHttp\Client($opts);
       try {
         // if a body is provided
         if ( isset($request['body']) ) {
@@ -429,9 +432,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
           $body = $this->is_domain_mapped($body);
 
-          $response = $client->request($request['method'], $request['url'], ['body' => $body, 'http_errors' => false, 'headers' => $headers, 'timeout' => 30]);
+          $response = $client->request($request['method'], $request['url'], ['body' => $body, 'headers' => $headers]);
         } else {
-          $response = $client->request($request['method'], $request['url'], ['http_errors' => false, 'headers' => $headers, 'timeout' => 30]);
+          $response = $client->request($request['method'], $request['url'], ['headers' => $headers]);
         }
 
         $body = $response->getBody();
@@ -443,6 +446,10 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       } catch (Exception $e) {
         $error = $e->getMessage();
       }
+
+      file_put_contents(ABSPATH . 'es_request.log', print_r($request, 1) . "\r\n", FILE_APPEND);
+      file_put_contents(ABSPATH . 'es_request.log', print_r($results, 1) . "\r\n", FILE_APPEND);
+      file_put_contents(ABSPATH . 'es_request.log', print_r($error, 1) . "\r\n", FILE_APPEND);
 
       if ($error) {
         if ($is_internal || (isset($request['print']) && !$request['print'])) {
