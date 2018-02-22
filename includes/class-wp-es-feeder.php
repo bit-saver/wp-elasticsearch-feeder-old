@@ -489,7 +489,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     public function get_allowed_post_types() {
-      $settings  = get_option( $this->plugin_name );
+      $settings = get_option( $this->plugin_name );
       $types = [];
       if ($settings && $settings['es_post_types'])
         foreach ($settings['es_post_types'] as $post_type => $val)
