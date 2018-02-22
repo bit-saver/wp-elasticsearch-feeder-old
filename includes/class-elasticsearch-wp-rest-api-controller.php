@@ -385,3 +385,6 @@ function register_elasticsearch_rest_routes() {
 }
 
 add_action( 'rest_api_init', 'register_elasticsearch_rest_routes' );
+
+// Add cdp-rest support for the base post type
+add_post_type_support('post', 'cdp-rest');
