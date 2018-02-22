@@ -489,12 +489,26 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     }
 
     public function get_allowed_post_types() {
-      $settings  = get_option( $this->plugin_name );
+      $settings = get_option( $this->plugin_name );
       $types = [];
       if ($settings && $settings['es_post_types'])
         foreach ($settings['es_post_types'] as $post_type => $val)
           if ($val) $types[] = $post_type;
       return $types;
+    }
+
+    public function get_api_post_types() {
+      $plugins = [
+        'wp-elasticsearch-feeder/wp-es-feeder.php' => [ 'post' ],
+        'cdp-video-post-type/cdp-video-post-type.php' => [ 'video' ],
+        'courses-custom-posts/courses-custom-posts.php' => [ 'courses' ]
+      ];
+      $api_types = [];
+      foreach ( $plugins as $plugin => $types ) {
+        if ( is_plugin_active( $plugin ) )
+          $api_types = array_merge( $api_types, $types );
+      }
+      return $api_types;
     }
 
     /**

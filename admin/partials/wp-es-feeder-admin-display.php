@@ -48,7 +48,7 @@
 				}
 			}
 
-			$es_allowed_types = $feeder->es_request(array('url' => 'types', 'method' => 'GET'));
+			$es_allowed_types = $feeder->get_api_post_types();
     ?>
 
     <?php
