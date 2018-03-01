@@ -41,6 +41,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       // add "Do not index" box to posts and pages
       $this->loader->add_action( 'add_meta_boxes', $plugin_admin, 'add_admin_index_to_cdp' );
+      $this->loader->add_action( 'add_meta_boxes', $plugin_admin, 'add_admin_cdp_taxonomy' );
 
       // add settings link to plugin
       $plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
@@ -265,6 +266,11 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         );
       }
 
+      if (array_key_exists('cdp_terms', $_POST))
+        update_post_meta($id, '_iip_taxonomy_terms', $_POST['cdp_terms']);
+      else
+        update_post_meta($id, '_iip_taxonomy_terms', array());
+
       // return early if missing parameters
       if ( $post == null || !$settings[ 'es_post_types' ][ $post_type ] ) {
         return;
@@ -420,7 +426,6 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $is_internal = true;
         $config = get_option( $this->plugin_name );
         $opts['base_uri'] = trim($config['es_url'], '/') . '/';
-//        file_put_contents(ABSPATH . 'es_request.log', print_r($opts, 1) . "\r\n", FILE_APPEND);
       }
 
 
@@ -453,9 +458,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $error = $e->getMessage();
       }
 
-//      file_put_contents(ABSPATH . 'es_request.log', print_r($request, 1) . "\r\n", FILE_APPEND);
-//      file_put_contents(ABSPATH . 'es_request.log', print_r($results, 1) . "\r\n", FILE_APPEND);
-//      file_put_contents(ABSPATH . 'es_request.log', print_r($error, 1) . "\r\n", FILE_APPEND);
+      file_put_contents(ABSPATH . 'es_request.log', "REQUEST: " . print_r($request, 1) . "\r\n", FILE_APPEND);
+      file_put_contents(ABSPATH . 'es_request.log', "RESULTS: " . print_r($results, 1) . "\r\n", FILE_APPEND);
+      file_put_contents(ABSPATH . 'es_request.log', "ERROR: " . print_r($error, 1) . "\r\n", FILE_APPEND);
 
       if ($error) {
         if ($is_internal || (isset($request['print']) && !$request['print'])) {
@@ -492,6 +497,14 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       }
 
       return $body;
+    }
+
+    public function get_taxonomy() {
+      $args = [
+        'method' => 'GET',
+        'url' => 'taxonomy'
+      ];
+      return $this->es_request($args);
     }
 
     public function get_allowed_post_types() {
