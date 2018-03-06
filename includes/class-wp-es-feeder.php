@@ -61,8 +61,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       // elasticsearch indexing hook actions
       add_action( 'save_post', array( $this, 'save_post' ), 99, 2 );
-      add_action( 'delete_post', array( &$this, 'delete_post' ), 10, 1 );
-      add_action( 'trash_post', array( &$this, 'delete_post' ) );
+      add_action( 'transition_post_status', array($this, 'delete_post'), 10, 3 );
       add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
       add_action( 'wp_ajax_es_initiate_sync', array($this, 'es_initiate_sync') );
       add_action( 'wp_ajax_es_process_next', array($this, 'es_process_next') );
@@ -272,7 +271,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       }
 
 
-      // switch operation based on post status
+      // we only care about modifying published posts
       if ( $post->post_status === 'publish' ) {
       
         // check to see if post should be indexed or removed from index
@@ -284,12 +283,19 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         } else {
           $this->addOrUpdate( $post );
         }
-      } else {
-        $this->delete( $post );
       }
     }
 
-    public function delete_post( $id ) {
+    /**
+     * Only delete posts if the old status was 'publish'.
+     * Otherwise, do nothing.
+     *
+     * @param $new_status
+     * @param $old_status
+     * @param $id
+     */
+    public function delete_post( $new_status, $old_status, $id ) {
+      if ( $old_status === $new_status || $old_status !== 'publish') return;
       if ( is_object( $id ) ) {
         $post = $id;
       } else {
