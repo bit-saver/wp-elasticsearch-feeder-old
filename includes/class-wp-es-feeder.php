@@ -496,7 +496,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
     public function get_taxonomy() {
       $args = [
         'method' => 'GET',
-        'url' => 'taxonomy'
+        'url' => 'taxonomy?tree'
       ];
       return $this->es_request($args);
     }
