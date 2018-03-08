@@ -110,7 +110,7 @@ class wp_es_feeder_Admin {
     foreach( $screens as $screen ) {
       add_meta_box(
           'cdp-taxonomy',           // Unique ID
-          'CDP Taxonomy',  // Box title
+          'Categories',  // Box title
           array($this, 'cdp_taxonomy_display'),  // Content callback, must be of type callable
           $screen,                   // Post type
           'side',
