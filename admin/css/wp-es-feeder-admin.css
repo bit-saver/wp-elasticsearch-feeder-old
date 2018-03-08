@@ -85,6 +85,10 @@
      /*100% { width: auto; }*/
  }
 
+ #cdp-taxonomy {
+     display: none;
+ }
+
  #cdp_sync_status {
      display: inline-block;
      margin-bottom: -2px;

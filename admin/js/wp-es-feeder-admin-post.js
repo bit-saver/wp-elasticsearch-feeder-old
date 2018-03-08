@@ -9,7 +9,7 @@
   } );
 
   $(document).ready(function() {
-    $('#cdp-terms').chosen();
+    $('#cdp-terms').chosen({width: '100%'});
     toggleTaxBox();
     $('input[name=index_post_to_cdp_option]').change(toggleTaxBox);
   });
