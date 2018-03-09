@@ -210,10 +210,10 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $formats = implode(',', array_fill(0, count($post_types), '%s'));
         $statuses = implode(',', array(ES_FEEDER_SYNC::SYNCING, ES_FEEDER_SYNC::SYNC_WHILE_SYNCING));
         $query = "SELECT p.ID FROM $wpdb->posts p 
-                  LEFT JOIN $wpdb->postmeta ms ON p.ID = ms.post_id
+                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_status') ms ON p.ID = ms.post_id
                   LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m ON p.ID = m.post_id
                   WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND (m.meta_value IS NULL OR m.meta_value != 'no') 
-                    AND ms.meta_key = '_cdp_sync_status' AND (ms.meta_value IS NULL OR ms.meta_value NOT IN ($statuses))";
+                    AND (ms.meta_value IS NULL OR ms.meta_value NOT IN ($statuses))";
         $query = $wpdb->prepare($query, array_keys($post_types));
         $post_ids = $wpdb->get_col($query);
       }
