@@ -127,7 +127,14 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       if ( $this->shouldIndex( $post ) ) {
         $response = $this->prepare_item_for_response( $post, $request );
         $data = $response->get_data();
-        $data['categories'] = get_post_meta($id, '_iip_taxonomy_terms', true) ?: array();
+        $categories = get_post_meta($id, '_iip_taxonomy_terms', true) ?: array();
+        $cat_ids = array();
+        foreach ($categories as $cat) {
+          $args = explode('<', $cat);
+          if (!in_array($args[0], $cat_ids))
+            $cat_ids[] = $args[0];
+        }
+        $data['categories'] = $cat_ids;
         $response->set_data($data);
       }
 
