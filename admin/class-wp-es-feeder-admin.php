@@ -10,9 +10,14 @@ class wp_es_feeder_Admin {
     $this->version = $version;
   }
 
-  public function enqueue_styles() {
+  public function enqueue_styles($hook) {
+    global $post, $feeder;
     wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/wp-es-feeder-admin.css',
       array(), $this->version, 'all' );
+    if ( $hook == 'post.php' && in_array($post->post_type, $feeder->get_allowed_post_types()) ) {
+      wp_enqueue_style('chosen', plugin_dir_url(__FILE__) . 'css/chosen.css');
+    }
+
   }
 
   public function enqueue_scripts($hook) {
@@ -38,6 +43,7 @@ class wp_es_feeder_Admin {
 
 
     if ( $hook == 'post.php' && in_array($post->post_type, $feeder->get_allowed_post_types()) ) {
+      wp_enqueue_script('chosen', plugin_dir_url(__FILE__) . 'js/chosen.jquery.min.js', array('jquery'), null);
       $handle = $this->plugin_name . '-sync-status';
       wp_register_script( $handle, plugin_dir_url( __FILE__ ) . 'js/wp-es-feeder-admin-post.js',
         array( 'jquery' ), false, false );
@@ -87,6 +93,36 @@ class wp_es_feeder_Admin {
   function index_to_cdp_display($post) {
     global $feeder;
     include_once( 'partials/wp-es-feeder-index-to-cdp-display.php' );
+  }
+
+  function add_admin_cdp_taxonomy() {
+
+    $options = get_option($this->plugin_name);
+    $es_post_types = $options['es_post_types']?$options['es_post_types']:null;
+    $screens = array();
+    if ( $es_post_types ) {
+      foreach($es_post_types as $key=>$value){
+        if ($value) {
+          array_push($screens, $key);
+        }
+      }
+    }
+    foreach( $screens as $screen ) {
+      add_meta_box(
+          'cdp-taxonomy',           // Unique ID
+          'Categories',  // Box title
+          array($this, 'cdp_taxonomy_display'),  // Content callback, must be of type callable
+          $screen,                   // Post type
+          'side',
+          'high'
+      );
+    }
+  }
+
+  function cdp_taxonomy_display($post) {
+    global $feeder;
+    $taxonomy = $feeder->get_taxonomy();
+    include_once( 'partials/wp-es-feeder-cdp-taxonomy-display.php' );
   }
 
   // Render the settings page for this plugin.
