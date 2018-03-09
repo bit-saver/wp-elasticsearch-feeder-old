@@ -369,7 +369,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       update_post_meta($post->ID, '_cdp_last_sync', date('Y-m-d H:i:s'));
 
       $options = array(
-        'url' => $post->post_type,
+        'url' => $this->get_post_type_label($post->post_type),
         'method' => 'POST',
         'body' => $api_response,
         'print' => $print
@@ -388,7 +388,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       if ( !$this->is_syncable( $post ) ) return;
 
       $uuid = $this->get_uuid($post);
-      $delete_url = $post->post_type . '/' . $uuid;
+      $delete_url = $this->get_post_type_label($post->post_type) . '/' . $uuid;
 
       $options = array(
          'url' => $delete_url,
@@ -532,6 +532,18 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       else
         $host = str_ireplace( 'https://', '', str_ireplace( 'http://', '', $host ) );
       return $host;
+    }
+
+    /**
+     * Retrieves the singular post type label for use in API end points.
+     * Some post types are registered as plural but we want to use singular end point URLs.
+     *
+     * @param $post_type
+     */
+    public function get_post_type_label($post_type) {
+      $obj = get_post_type_object($post_type);
+      if (!$obj) return;
+      return $obj->labels->singular_name;
     }
   }
 }
