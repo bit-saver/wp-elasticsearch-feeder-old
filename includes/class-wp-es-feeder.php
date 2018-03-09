@@ -539,10 +539,11 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * Some post types are registered as plural but we want to use singular end point URLs.
      *
      * @param $post_type
+     * @return string
      */
     public function get_post_type_label($post_type) {
       $obj = get_post_type_object($post_type);
-      if (!$obj) return;
+      if (!$obj) return $post_type;
       return $obj->labels->singular_name;
     }
   }
