@@ -112,10 +112,12 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
     /**
      * Prints the appropriately colored sync status indicator dot given a status.
+     * Text indicates whether or not to include indicator label text.
      *
      * @param $status
+     * @param $text boolean
      */
-    public function sync_status_indicator($status) {
+    public function sync_status_indicator($status, $text = true) {
       $color = 'black';
       switch ( $status ) {
         case ES_FEEDER_SYNC::SYNCING:
@@ -134,6 +136,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       }
       ?>
       <div class="sync-status sync-status-<?=$color?>" title="<?=ES_FEEDER_SYNC::display($status)?>"></div>
+      <div class="sync-status-label"><?=$text ? ES_FEEDER_SYNC::display($status) : ''?></div>
       <?php
     }
 

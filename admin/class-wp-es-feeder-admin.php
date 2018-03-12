@@ -202,7 +202,7 @@ class wp_es_feeder_Admin {
     global $feeder;
     if ( $column_name == 'sync_status' ) {
       $status = get_post_meta( $post_ID,'_cdp_sync_status', true );
-      $feeder->sync_status_indicator($status);
+      $feeder->sync_status_indicator($status, false);
     }
   }
 
