@@ -382,9 +382,14 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       );
 
       $response = $this->es_request( $options, $callback );
-      file_put_contents(ABSPATH . 'callback.log', print_r($response, 1) . "\r\n", FILE_APPEND);
+      file_put_contents(ABSPATH . 'callback.log', "IMMEDIATE RESPONSE:\r\n" . print_r($response, 1) . "\r\n", FILE_APPEND);
       if ( !$response ) {
         error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
+        update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
+        delete_post_meta( $post->ID, '_cdp_sync_uid' );
+      } else if (isset($response->error) && $response->error) {
+        update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
+        delete_post_meta( $post->ID, '_cdp_sync_uid' );
       }
 
       return $response;
@@ -403,11 +408,15 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       );
 
       $response = $this->es_request( $options );
-      if ((is_array($response) && (!isset($response['error']) || !$response['error']))
-            || (is_object($response) && (!isset($repsonse->error) || !$response->error))) {
+      if ( !$response ) {
+        error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
+        update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
+      } else if (isset($response->error) && $response->error) {
+        update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
+      } else {
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::NOT_SYNCED );
-        delete_post_meta( $post->ID, '_cdp_sync_uid' );
       }
+      delete_post_meta( $post->ID, '_cdp_sync_uid' );
     }
 
     public function es_request($request, $callback = null) {
