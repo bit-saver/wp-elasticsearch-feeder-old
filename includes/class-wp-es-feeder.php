@@ -387,7 +387,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
         delete_post_meta( $post->ID, '_cdp_sync_uid' );
-      } else if ($response->error) {
+      } else if (isset($response->error) && $response->error) {
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
         delete_post_meta( $post->ID, '_cdp_sync_uid' );
       }
@@ -411,7 +411,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       if ( !$response ) {
         error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
-      } else if ($response->error) {
+      } else if (isset($response->error) && $response->error) {
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
       } else {
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::NOT_SYNCED );
