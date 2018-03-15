@@ -173,9 +173,9 @@ class wp_es_feeder_Admin {
     global $feeder;
     if (!current_user_can('manage_options') || isset($_COOKIE['cdp-feeder-notice-dismissed'])) return;
     $errors = $feeder->check_sync_errors();
-    if ($errors['errors']) { ?>
+    if ($errors['errors']) { $plural = ($errors['errors'] != 1 ? 's' : '');?>
       <div class="notice notice-error feeder-notice is-dismissible">
-        <p>WP ES Feeder has enountered <?=$errors['errors']?> error(s). Click <a href="<?=admin_url('options-general.php?page=wp-es-feeder')?>">here</a> to attempt a fix.</p>
+          <p>WP ES Feeder has enountered <?=$errors['errors']?> error<?=$plural?>. Click <a href="<?=admin_url('options-general.php?page=wp-es-feeder')?>">here</a> to go to the <a href="<?=admin_url('options-general.php?page=wp-es-feeder')?>">settings page</a> where you can fix the error<?=$plural?>.</p>
       </div>
       <script type="text/javascript">
         jQuery(function($) {
