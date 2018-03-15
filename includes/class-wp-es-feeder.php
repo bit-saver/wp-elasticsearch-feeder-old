@@ -271,7 +271,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
 
       if (array_key_exists('cdp_terms', $_POST))
         update_post_meta($id, '_iip_taxonomy_terms', $_POST['cdp_terms']);
-      else
+      else if ($_POST && is_array($_POST))
         update_post_meta($id, '_iip_taxonomy_terms', array());
 
       // return early if missing parameters
@@ -279,18 +279,21 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         return;
       }
 
-
       // we only care about modifying published posts
       if ( $post->post_status === 'publish' ) {
-      
-        // check to see if post should be indexed or removed from index
-        $shouldIndex = $_POST['index_post_to_cdp_option'];
-        
-        // default to indexing - post has to be specifically set to 'no'
-        if( $shouldIndex === 'no' ) {
-          $this->delete( $post );
-        } else {
-          $this->addOrUpdate( $post );
+        if (array_key_exists('index_post_to_cdp_option', $_POST)) {
+          // check to see if post should be indexed or removed from index
+          $shouldIndex = $_POST[ 'index_post_to_cdp_option' ];
+        } else
+          $shouldIndex = get_post_meta($id, '_iip_index_post_to_cdp_option', true);
+
+        if (isset($shouldIndex) && $shouldIndex) {
+          // default to indexing - post has to be specifically set to 'no'
+          if( $shouldIndex === 'no' ) {
+            $this->delete( $post );
+          } else {
+            $this->addOrUpdate( $post );
+          }
         }
       }
     }
