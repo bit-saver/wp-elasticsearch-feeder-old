@@ -69,13 +69,13 @@
    */
   function resyncStart(errorsOnly) {
     return function() {
-      if (errorsOnly) {
-        var $notice = $('.feeder-notice.notice-error');
-        $notice.fadeTo(100, 0, function() {
-          $notice.slideUp(100, function() {
+      var $notice = $('.feeder-notice.notice-error');
+      if ($notice.length > 0) {
+        $notice.fadeTo( 100, 0, function () {
+          $notice.slideUp( 100, function () {
             $notice.remove();
-          });
-        });
+          } );
+        } );
       }
       sync = {
         total: 0,
@@ -113,7 +113,7 @@
       $('#es_resync_control').html('Pause Sync');
       sync.paused = false;
       $('#progress-bar').removeClass('paused');
-      $('.spinner-text').html('Processing... Do not leave this page.');
+      $('.spinner-text').html('Processing... Leaving this page will pause the resync.');
       processQueue();
     } else {
       $('#es_resync_control').html('Resume Sync');
@@ -170,7 +170,7 @@
    */
   function createProgress() {
     var html = '<div class="spinner is-active spinner-animation">';
-    html += '<span class="spinner-text">' + (sync.paused ? 'Paused.' : 'Processing... Do not leave this page.') + '</span> <span class="count"></span> <span class="current-post"></span>';
+    html += '<span class="spinner-text">' + (sync.paused ? 'Paused.' : 'Processing... Leaving this page will pause the resync.') + '</span> <span class="count"></span> <span class="current-post"></span>';
     html += '</div>';
     $('.index-spinner').html(html);
     $('.progress-wrapper').html('<div id="progress-bar" ' + (sync.paused ? 'class="paused"' : '') + '><span></span></div>');
