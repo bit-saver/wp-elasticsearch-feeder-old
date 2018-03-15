@@ -175,7 +175,7 @@ class wp_es_feeder_Admin {
     $errors = $feeder->check_sync_errors();
     if ($errors['errors']) { ?>
       <div class="notice notice-error feeder-notice is-dismissible">
-        <p>WP ES Feeder has enountered <?=$errors['errors']?> error(s). Click <a href="<?=admin_url('options-general.php?page=wp-es-feeder')?>">here</a> to attempt a fix.</p>
+        <p>WP ES Feeder has encountered <?=$errors['errors']?> error(s). Click <a href="<?=admin_url('options-general.php?page=wp-es-feeder')?>">here</a> to attempt a fix.</p>
       </div>
       <script type="text/javascript">
         jQuery(function($) {
