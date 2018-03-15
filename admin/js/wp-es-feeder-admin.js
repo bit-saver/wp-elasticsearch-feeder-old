@@ -69,6 +69,14 @@
    */
   function resyncStart(errorsOnly) {
     return function() {
+      if (errorsOnly) {
+        var $notice = $('.feeder-notice.notice-error');
+        $notice.fadeTo(100, 0, function() {
+          $notice.slideUp(100, function() {
+            $notice.remove();
+          });
+        });
+      }
       sync = {
         total: 0,
         complete: 0,
