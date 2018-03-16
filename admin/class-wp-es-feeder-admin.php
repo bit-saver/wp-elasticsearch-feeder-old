@@ -81,7 +81,7 @@ class wp_es_feeder_Admin {
     foreach( $screens as $screen ) {
       add_meta_box(
           'index-to-cdp-mb',           // Unique ID
-          'Index Post to CDP',  // Box title
+          'Publish to Content Commons',  // Box title
           array($this, 'index_to_cdp_display'),  // Content callback, must be of type callable
           $screen,                   // Post type
           'side',
@@ -194,7 +194,7 @@ class wp_es_feeder_Admin {
   public function columns_head( $defaults ) {
     global $feeder;
     if (in_array(get_post_type(), $feeder->get_allowed_post_types()))
-        $defaults[ 'sync_status' ] = 'Sync Status';
+        $defaults[ 'sync_status' ] = 'Publish Status';
     return $defaults;
   }
 
