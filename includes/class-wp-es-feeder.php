@@ -201,7 +201,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * If sync_errors is present, we will only initiate a sync for posts with a sync error.
      */
     public function es_initiate_sync() {
-      check_admin_referer();
+      check_admin_referer('initiate_sync');
       global $wpdb;
       $wpdb->delete($wpdb->postmeta, array('meta_value' => '_cdp_sync_queue'));
       if (isset($_POST['sync_errors']) && $_POST['sync_errors']) {
@@ -236,7 +236,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * as well as stats on the sync queue.
      */
     public function es_process_next() {
-      check_admin_referer();
+      check_admin_referer('process_next');
       global $wpdb;
       $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue' AND meta_value = 1";
       $post_id = $wpdb->get_var($query);
@@ -388,7 +388,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       );
 
       $response = $this->es_request( $options, $callback );
-      file_put_contents(ABSPATH . 'callback.log', "IMMEDIATE RESPONSE:\r\n" . print_r($response, 1) . "\r\n", FILE_APPEND);
+      $this->log("IMMEDIATE RESPONSE:\r\n" . print_r($response, 1), 'callback.log');
       if ( !$response ) {
         error_log( print_r( $this->error . 'addOrUpdate()[add] request failed', true ) );
         update_post_meta( $post->ID, '_cdp_sync_status', ES_FEEDER_SYNC::ERROR );
@@ -473,9 +473,9 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
         $error = $e->getMessage();
       }
 
-      file_put_contents(ABSPATH . 'es_request.log', "REQUEST: " . print_r($request, 1) . "\r\n", FILE_APPEND);
-      file_put_contents(ABSPATH . 'es_request.log', "RESULTS: " . print_r($results, 1) . "\r\n", FILE_APPEND);
-      file_put_contents(ABSPATH . 'es_request.log', "ERROR: " . print_r($error, 1) . "\r\n", FILE_APPEND);
+      $this->log("REQUEST: " . print_r($request, 1), 'es_request.log');
+      $this->log("RESULTS: " . print_r($results, 1), 'es_request.log');
+      $this->log("ERROR: " . print_r($error, 1), 'es_request.log');
 
       if ($error) {
         if ($is_internal || (isset($request['print']) && !$request['print'])) {
@@ -573,6 +573,11 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       $obj = get_post_type_object($post_type);
       if (!$obj) return $post_type;
       return $obj->labels->singular_name;
+    }
+
+    public function log($str, $file = 'feeder.log') {
+      $path = WP_CONTENT_DIR . '/plugins/wp-elasticsearch-feeder/' . $file;
+      file_put_contents($path, date('[m/d/y H:i:s] ') . print_r($str,1) . "\r\n", FILE_APPEND);
     }
   }
 }

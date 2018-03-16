@@ -315,7 +315,7 @@ class WP_ES_FEEDER_Callback_Controller {
    * @return array
    */
   public function processResponse( $request ) {
-    global $wpdb;
+    global $wpdb, $feeder;
     $data = $request->get_json_params();
     if (!$data)
       $data = $request->get_body_params();
@@ -327,7 +327,7 @@ class WP_ES_FEEDER_Callback_Controller {
     else
       $post_id = $data['request']['post_id'];
 
-    file_put_contents( ABSPATH . 'callback.log', "INCOMING CALLBACK FOR UID: $uid\r\n" . print_r( $data, 1 ) . "\r\n", FILE_APPEND );
+    $feeder->log("INCOMING CALLBACK FOR UID: $uid\r\n" . print_r( $data, 1 ) . "\r\n", 'callback.log');
 
     if ($post_id == $wpdb->get_var("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_uid' AND meta_value = '" . $wpdb->_real_escape($uid) . "'")) {
       $sync_status = get_post_meta($post_id, '_cdp_sync_status', true);
