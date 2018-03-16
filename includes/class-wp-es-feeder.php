@@ -201,7 +201,6 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * If sync_errors is present, we will only initiate a sync for posts with a sync error.
      */
     public function es_initiate_sync() {
-      check_admin_referer('initiate_sync');
       global $wpdb;
       $wpdb->delete($wpdb->postmeta, array('meta_value' => '_cdp_sync_queue'));
       if (isset($_POST['sync_errors']) && $_POST['sync_errors']) {
@@ -236,7 +235,6 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * as well as stats on the sync queue.
      */
     public function es_process_next() {
-      check_admin_referer('process_next');
       global $wpdb;
       $query = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_queue' AND meta_value = 1";
       $post_id = $wpdb->get_var($query);

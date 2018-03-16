@@ -3,3 +3,4 @@ composer.lock
 vendor/
 callback.log
 es_request.log
+feeder.log
