@@ -20,6 +20,7 @@
     <h2><?php echo esc_html( get_admin_page_title() ); ?></h2>
     <form method="post" name="elasticsearch_options" action="options.php">
     <?php
+            $status_counts = $feeder->get_sync_status_counts();
 			// Import all the options from the databse
 			$options = get_option($this->plugin_name);
 
@@ -78,7 +79,6 @@
 <!--							<input type="text" placeholder="sitename.com" class="regular-text" id="es_index" name="--><?php //echo $this->plugin_name; ?><!--[es_index]" value="--><?php //if(!empty($es_index)) echo $es_index; ?><!--"/><br/>-->
 <!--						</div>-->
 
-						<hr/>
 
 						<h2><span><?php esc_attr_e( 'Post Types', 'wp_admin_style' ); ?></span></h2>
 						<div class="inside">
@@ -102,10 +102,29 @@
 							?>
 						</div>
 
-						<hr/>
+                        <div class="inside">
+                          <?php submit_button('Save all changes', 'primary', 'submit', true); ?>
+                        </div>
+                    </div>
+                    <div class="postbox">
+                        <h2><span><?php esc_attr_e( 'Live Status', 'wp_admin_style' ); ?></span></h2>
+                        <h5 style="margin: 0; padding: 4px 12px">Last update: <span id="last-heartbeat"></span></h5>
+                        <div class="inside live-status-wrapper">
+                            <table>
+                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <tr>
+                                    <td><?php $feeder->sync_status_indicator($i, true)?></td>
+                                    <td class="status-count status-<?=$i?>" data-status-id="<?=$i?>"><?=(array_key_exists($i, $status_counts) ? $status_counts[$i] : 0)?></td>
+                                </tr>
+                                <?php endfor; ?>
+                            </table>
+                        </div>
+
+                        <hr>
 
 						<h2><span><?php esc_attr_e( 'Manage', 'wp_admin_style' ); ?></span></h2>
 						<div class="inside manage-btns">
+                            <button class="button-secondary" type="button" id="truncate_logs"><?php esc_attr_e( 'Truncate Logs' ); ?></button>
                             <button class="button-secondary" type="button" id="es_test_connection" name="es_test_connection"><?php esc_attr_e( 'Test Connection' ); ?></button>
 <!--							<input class="button-secondary" type="button" id="es_create_index" name="es_create_index" value="--><?php //esc_attr_e( 'Create Index' ); ?><!--" />-->
                             <button class="button-secondary" type="button" id="es_query_index" name="es_query_index"><?php esc_attr_e( 'Query Index' ); ?></button>
@@ -119,14 +138,10 @@
                         <div class="inside progress-wrapper"></div>
 						<hr/>
 
-						<div class="inside">
-							 <?php submit_button('Save all changes', 'primary', 'submit', true); ?>
-						</div>
-
-						<h2><span><?php esc_attr_e( 'Results', 'wp_admin_style' ); ?></span></h2>
+						<h2><span><?php esc_attr_e( 'Results', 'wp_admin_style' ); ?></span> <span style="font-weight: normal;">(descending order)</span></h2>
 
 						<div class="inside" style="margin-right: 10px;">
-							<pre id="es_output" style="min-width: 100%; display: block;background-color:#eaeaea;padding:5px;"></pre>
+							<pre id="es_output" style="min-width: 100%; display: block;background-color:#eaeaea;padding:5px;overflow: scroll;"></pre>
 						</div>
 					</div>
 				</div>

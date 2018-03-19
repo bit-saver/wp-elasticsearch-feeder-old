@@ -66,6 +66,7 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
       add_action( 'wp_ajax_es_request', array( $this, 'es_request') );
       add_action( 'wp_ajax_es_initiate_sync', array($this, 'es_initiate_sync') );
       add_action( 'wp_ajax_es_process_next', array($this, 'es_process_next') );
+      add_action( 'wp_ajax_es_truncate_logs', array($this, 'truncate_logs') );
 
       add_filter( 'heartbeat_received', array($this, 'heartbeat'), 10, 2 );
     }
@@ -94,20 +95,55 @@ if ( !class_exists( 'wp_es_feeder' ) ) {
      * Triggerd by heartbeat AJAX event, added the sync status indicator HTML
      * if the data includes es_sync_status which contains a post ID and will be
      * converted to the sync status indicator HTML.
+     * If the data includes es_sync_status_counts, send back an array of counts
+     * for each stuats ID.
      *
      * @param $response
      * @param $data
      * @return mixed
      */
     public function heartbeat($response, $data) {
-      if ( empty( $data['es_sync_status'] ) )
-        return $response;
-      $post_id = $data['es_sync_status'];
-      $status = $this->get_sync_status($post_id);
-      ob_start();
-      $this->sync_status_indicator($status);
-      $response['es_sync_status'] = ob_get_clean();
+      if ( !empty( $data['es_sync_status'] ) ) {
+        $post_id = $data[ 'es_sync_status' ];
+        $status = $this->get_sync_status( $post_id );
+        ob_start();
+        $this->sync_status_indicator( $status );
+        $response[ 'es_sync_status' ] = ob_get_clean();
+      }
+      if ( !empty( $data['es_sync_status_counts'] ) ) {
+        $response[ 'es_sync_status_counts' ] = $this->get_sync_status_counts();
+      }
       return $response;
+    }
+
+    public function truncate_logs() {
+      $path = WP_CONTENT_DIR . '/plugins/wp-elasticsearch-feeder/*.log';
+      foreach (glob($path) as $log)
+        file_put_contents($log, '');
+      echo 1;
+      exit;
+    }
+
+    /**
+     * Gets counts for each sync status
+     */
+    public function get_sync_status_counts() {
+      global $wpdb;
+      $opts = get_option( $this->plugin_name );
+      $post_types = $opts[ 'es_post_types' ];
+      $formats = implode(',', array_fill(0, count($post_types), '%s'));
+
+      $query = "SELECT IFNULL(ms.meta_value, 0) as status, COUNT(IFNULL(ms.meta_value, 0)) as total 
+                  FROM $wpdb->posts p 
+                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_cdp_sync_status') ms ON p.ID = ms.post_id
+                  LEFT JOIN (SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_iip_index_post_to_cdp_option') m ON p.ID = m.post_id
+                  WHERE p.post_type IN ($formats) AND p.post_status = 'publish' AND (m.meta_value IS NULL OR m.meta_value != 'no') GROUP BY IFNULL(ms.meta_value, 0)";
+      $query = $wpdb->prepare($query, array_keys($post_types));
+      $totals = $wpdb->get_results($query);
+      $ret = array();
+      foreach ($totals as $total)
+          $ret[$total->status] = $total->total;
+      return $ret;
     }
 
     /**
