@@ -20,5 +20,5 @@
 <label for="index_cdp_no">No</label>
 
 <div style="margin-top: 6px;">
-    Sync Status: <div id="cdp_sync_status" style="display: inline-block;"><?php $feeder->sync_status_indicator($sync);?></div>
+    Publish Status: <div id="cdp_sync_status" style="display: inline-block;"><?php $feeder->sync_status_indicator($sync);?></div>
 </div>

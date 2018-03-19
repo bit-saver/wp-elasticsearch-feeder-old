@@ -222,13 +222,13 @@ if ( !class_exists( 'ES_FEEDER_SYNC' ) ) {
      */
     public static function display($status) {
       switch ($status) {
-        case ES_FEEDER_SYNC::NOT_SYNCED: return 'Not Synced';
-        case ES_FEEDER_SYNC::SYNCING: return 'Syncing';
-        case ES_FEEDER_SYNC::SYNCED: return 'Synced';
-        case ES_FEEDER_SYNC::SYNC_WHILE_SYNCING: return 'Could not sync while sync in progress';
-        case ES_FEEDER_SYNC::RESYNC: return 'Resync Required';
+        case ES_FEEDER_SYNC::NOT_SYNCED: return 'Not Published';
+        case ES_FEEDER_SYNC::SYNCING: return 'Publishing';
+        case ES_FEEDER_SYNC::SYNCED: return 'Published';
+        case ES_FEEDER_SYNC::SYNC_WHILE_SYNCING: return 'Could not publish while publish in progress';
+        case ES_FEEDER_SYNC::RESYNC: return 'Publish Required';
         case ES_FEEDER_SYNC::ERROR: return 'Error';
-        default: return 'Never Synced';
+        default: return 'Never Published';
       }
     }
 
