@@ -127,6 +127,19 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
       if ( $this->shouldIndex( $post ) ) {
         $response = $this->prepare_item_for_response( $post, $request );
         $data = $response->get_data();
+
+        $categories = array_map( function ($cat) { return $cat['name']; }, ES_API_HELPER::get_categories( $post->ID ) );
+        $tags = array_map( function ($tag) { return $tag['name']; }, ES_API_HELPER::get_tags( $post->ID ) );
+        $keywords = [];
+        foreach ( $categories as $cat ) {
+          $cat = strtolower( $cat );
+          if ( !in_array( $cat, $keywords ) ) $keywords[] = $cat;
+        }
+        foreach ( $tags as $tag ) {
+          $tag = strtolower( $tag );
+          if ( !in_array( $tag, $keywords ) ) $keywords[] = $tag;
+        }
+        $data[ 'keywords' ] = $keywords;
         $categories = get_post_meta($id, '_iip_taxonomy_terms', true) ?: array();
         $cat_ids = array();
         foreach ($categories as $cat) {
@@ -226,11 +239,6 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
         $post_data[ 'excerpt' ] = $post->post_excerpt;
       }
 
-      // pre-approved
-      $post_data[ 'categories' ] = ES_API_HELPER::get_categories( $post->ID );
-      // $post_data[ 'categories.searchable' ] = ES_API_HELPER::get_categories_searchable( $post->ID );
-      $post_data[ 'tags' ] = ES_API_HELPER::get_tags( $post->ID );
-      // $post_data[ 'tags.searchable' ] = ES_API_HELPER::get_tags_searchable( $post->ID );
       $post_data[ 'language' ] = ES_API_HELPER::get_language( $post->ID );
       $post_data[ 'translations' ] = ES_API_HELPER::get_related_translated_posts( $post->ID, $post->post_type );
 

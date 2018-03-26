@@ -184,7 +184,7 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
      * Renders Visual Composer shortcodes if Visual Composer is turned on
      *
      * @param [type] $object
-     * @return void
+     * @return string
      */
     public static function render_vs_shortcodes( $object ) {
       if ( !class_exists( 'WPBMap' ) ) { // VC Class
