@@ -8,11 +8,15 @@
     paused: false
   };
 
+  var last_heartbeat = null;
+  var last_heartbeat_timer = null;
+
   /**
    * Register click listener functions, load sync data from the injected variable, and
    * update sync state if a sync was in progress.
    */
   $(window).load(function() {
+    $('#truncate_logs').on('click', truncateLogs);
     $('#es_test_connection').on('click', testConnection);
     $('#es_query_index').on('click', queryIndex);
     $('#es_resync').on('click', resyncStart(0));
@@ -27,7 +31,57 @@
       createProgress();
       updateProgress();
     }
+
+    $(document).on('heartbeat-send', function (event, data) {
+      data.es_sync_status_counts = 1;
+    });
+    $(document).on('heartbeat-tick', function (event, data) {
+      resetHeartbeatTimer();
+      if (!data.es_sync_status_counts) return;
+      $('.status-count').each(function (i, status) {
+        var $status = $(status);
+        var id = $status.attr('data-status-id');
+        var newCount = data.es_sync_status_counts[id] || 0;
+        if ($status.html() !== '' + newCount) {
+          $status.fadeOut( 'slow', function () {
+            $status.html( newCount );
+            $status.fadeIn('slow');
+          } );
+        }
+      });
+    } );
+    resetHeartbeatTimer();
   });
+
+  function resetHeartbeatTimer() {
+    if (last_heartbeat_timer)
+      clearInterval(last_heartbeat_timer);
+    last_heartbeat = 0;
+    $('#last-heartbeat').html(last_heartbeat + 's ago (usually every 15s)');
+    last_heartbeat_timer = setInterval(function() {
+      last_heartbeat++;
+      $('#last-heartbeat').html(last_heartbeat + 's ago (usually every 15s)');
+    }, 1000);
+  }
+
+  function truncateLogs() {
+    $.ajax({
+      url: ajaxurl,
+      type: 'POST',
+      dataType: 'JSON',
+      data: {
+        _wpnonce: $('#_wpnonce').val(),
+        action: 'es_truncate_logs'
+      },
+      success: function (result) {
+        alert('Logs truncated.');
+      },
+      error: function (result) {
+        console.error(result);
+        alert('Communication error while truncating logs.');
+      }
+    })
+  }
 
   /**
    * Send a basic request to the provided URL and print the response in the output container.
@@ -162,7 +216,7 @@
       updateProgress();
       processQueue();
     }
-    $('#es_output').text(JSON.stringify(result, null, 2));
+    $('#es_output').prepend(JSON.stringify(result, null, 2) + "\r\n\r\n");
   }
 
   /**
@@ -175,6 +229,7 @@
     $('.index-spinner').html(html);
     $('.progress-wrapper').html('<div id="progress-bar" ' + (sync.paused ? 'class="paused"' : '') + '><span></span></div>');
     $('#es_resync_control').html(sync.paused ? 'Resume Sync' : 'Pause Sync').show();
+    $('#es_output').empty();
   }
 
   /**

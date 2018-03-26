@@ -122,3 +122,15 @@
  .sync-status-green {
      background-color: #2abc51;
  }
+
+ .live-status-wrapper table,
+ .live-status-wrapper table td {
+     border: none;
+ }
+ .live-status-wrapper table td {
+     padding: 2px 10px 2px 0;
+ }
+
+ .live-status-wrapper table td.status-count {
+     text-align: right;
+ }
