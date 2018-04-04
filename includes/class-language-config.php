@@ -7,20 +7,24 @@ class Language_Helper {
 
   public $languages;
 
-  public $backup = array(
-    'language_code' => 'en',
-    'locale' => 'en-us',
-    'text_direction' => false,
-    'display_name' => 'English',
-    'native_name' => 'English'
-  );
+  public $backup_lang;
+
+  public function __construct() {
+    $this->backup_lang = (object) array(
+      'language_code' => 'en',
+      'locale' => 'en-us',
+      'text_direction' => false,
+      'display_name' => 'English',
+      'native_name' => 'English'
+    );
+  }
 
   public function get_language_by_locale( $locale ) {
     $locale = strtolower($locale);
     if ( !$this->languages ) $this->load_languages();
     if ( !$this->languages || !count($this->languages)) {
       if ( $locale == 'en' || $locale == 'en-us' )
-        return $this->backup;
+        return $this->backup_lang;
       return null;
     }
     return $this->languages[strtolower($locale)];
@@ -41,7 +45,7 @@ class Language_Helper {
       'url' => 'language'
     ];
     $data = $feeder->es_request($args);
-    if ( $data && count($data) ) {
+    if ( $data && count($data) && !$data->error ) {
       $this->languages = [];
       foreach ( $data as $lang ) {
         $this->languages[$lang->locale] = $lang;
@@ -51,7 +55,7 @@ class Language_Helper {
 
   public function get_languages() {
     if ( !$this->languages ) $this->load_languages();
-    if ( !$this->languages || !count($this->languages)) return ['en' => $this->backup];
+    if ( !$this->languages || !count($this->languages)) return ['en' => $this->backup_lang];
     return $this->languages;
   }
 }
