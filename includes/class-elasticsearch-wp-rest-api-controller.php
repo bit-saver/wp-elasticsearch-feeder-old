@@ -191,6 +191,8 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
       $post_data[ 'site' ] = $this->get_site();
 
+      $post_data[ 'owner' ] = get_bloginfo('name');
+
       if ( isset( $post->post_date ) ) {
         $post_data[ 'published' ] = get_the_date( 'c', $post->ID );
       }
