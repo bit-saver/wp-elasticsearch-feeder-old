@@ -1,53 +1,57 @@
-<?php 
+<?php
+
+global $cdp_language_helper;
+$cdp_language_helper = new Language_Helper();
 
 class Language_Helper {
 
-  // the country codes are different depending on country so just making language_code & locale same for now
-  const LANGUAGE_HASH = array (
-    'en' => array (
-      'language_code' => 'en',
-      'locale' => 'en-US',
-      'text_direction' => false,
-      'display_name' => 'English',
-      'native_name' => 'English',
-      'different_language' => true
-    ),
+  public $languages;
 
-    'es' => array (
-      'language_code' => 'es',
-      'locale' => 'es',  
-      'text_direction' => false,
-      'display_name' => 'Spanish',
-      'native_name' => 'Spanish',
-      'different_language' => true
-    ),
-
-    'fr' => array(
-      'language_code' => 'fr',
-      'locale' => 'fr',
-      'text_direction' => false,
-      'display_name' => 'French',
-      'native_name' => 'French',
-      'different_language' => true
-    ),
-
-    'pt' => array(
-      'language_code' => 'pt',
-      'locale' => 'pt',
-      'text_direction' => false,
-      'display_name' => 'Portuguese',
-      'native_name' => 'Portuguese',
-      'different_language' => true
-    )
+  public $backup = array(
+    'language_code' => 'en',
+    'locale' => 'en-us',
+    'text_direction' => false,
+    'display_name' => 'English',
+    'native_name' => 'English'
   );
 
-  public static function get_language_by_locale( $locale ) { 
-    return self::LANGUAGE_HASH[$locale];
+  public function get_language_by_locale( $locale ) {
+    $locale = strtolower($locale);
+    if ( !$this->languages ) $this->load_languages();
+    if ( !$this->languages || !count($this->languages)) {
+      if ( $locale == 'en' || $locale == 'en-us' )
+        return $this->backup;
+      return null;
+    }
+    return $this->languages[strtolower($locale)];
   }
 
-  public static function get_language_by_meta_field( $id, $meta_field ) { 
+  public function get_language_by_meta_field( $id, $meta_field ) {
     $locale = get_post_meta( $id, $meta_field, true );   //'
     $locale = empty( $locale ) ? 'en' : $locale;
-    return self::LANGUAGE_HASH[$locale];
+    if ( !$this->languages ) $this->load_languages();
+    return $this->languages[strtolower($locale)];
+  }
+
+  public function load_languages() {
+    global $feeder;
+    if ( !$feeder ) return;
+    $args = [
+      'method' => 'GET',
+      'url' => 'language'
+    ];
+    $data = $feeder->es_request($args);
+    if ( $data && count($data) ) {
+      $this->languages = [];
+      foreach ( $data as $lang ) {
+        $this->languages[$lang->locale] = $lang;
+      }
+    }
+  }
+
+  public function get_languages() {
+    if ( !$this->languages ) $this->load_languages();
+    if ( !$this->languages || !count($this->languages)) return ['en' => $this->backup];
+    return $this->languages;
   }
 }
