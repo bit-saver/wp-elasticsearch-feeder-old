@@ -45,7 +45,9 @@ class Language_Helper {
       'url' => 'language'
     ];
     $data = $feeder->es_request($args);
-    if ( $data && count( $data ) && (!array_key_exists( 'error', $data ) || !$data[ 'error' ]) && (!is_object( $data ) || !$data->error) ) {
+    if ( $data && count( $data )
+        && (!is_array( $data ) || !array_key_exists( 'error', $data ) || !$data[ 'error' ])
+        && (!is_object( $data ) || !$data->error) ) {
       $this->languages = [];
       foreach ( $data as $lang ) {
         $this->languages[$lang->locale] = $lang;
