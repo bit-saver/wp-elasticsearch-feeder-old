@@ -28,6 +28,32 @@ if ( !class_exists( 'ES_API_HELPER' ) ) {
       return $data;
     }
 
+    public static function get_image_size_array( $id ) {
+      $image = wp_prepare_attachment_for_js( $id );
+      $sizes = [
+        'small' => null,
+        'medium' => null,
+        'large' => null,
+        'full' => null
+      ];
+      if (!$image) return $sizes;
+      foreach ($image['sizes'] as $size) {
+        if ($size['width'] < 400) {
+          if (!$sizes['small'] || $size['width'] > $sizes['small']['width'])
+            $sizes['small'] = $size;
+        } else if ($size['width'] >= 400 && $size['width'] <= 900) {
+          if (!$sizes['medium'] || $size['width'] > $sizes['medium']['width'])
+            $sizes['medium'] = $size;
+        } else if ($size['width'] > 900 && $size['width'] < 3000) {
+          if (!$sizes['large'] || $size['width'] > $sizes['large']['width'])
+            $sizes['large'] = $size;
+        }
+      }
+      if ($image['sizes']['full'])
+        $sizes['full'] = $image['sizes']['full'];
+      return $sizes;
+    }
+
     public static function get_language( $id ) {
       global $sitepress;
       if ( $sitepress ) {
