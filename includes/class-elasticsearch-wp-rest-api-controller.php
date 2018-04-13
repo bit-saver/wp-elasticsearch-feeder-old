@@ -130,16 +130,15 @@ if ( !class_exists( 'WP_ES_FEEDER_REST_Controller' ) ) {
 
         $categories = array_map( function ($cat) { return $cat['name']; }, ES_API_HELPER::get_categories( $post->ID ) );
         $tags = array_map( function ($tag) { return $tag['name']; }, ES_API_HELPER::get_tags( $post->ID ) );
-        $keywords = [];
         foreach ( $categories as $cat ) {
           $cat = strtolower( $cat );
-          if ( !in_array( $cat, $keywords ) ) $keywords[] = $cat;
+          if ( !in_array( $cat, $tags ) ) $tags[] = $cat;
         }
         foreach ( $tags as $tag ) {
           $tag = strtolower( $tag );
-          if ( !in_array( $tag, $keywords ) ) $keywords[] = $tag;
+          if ( !in_array( $tag, $tags ) ) $tags[] = $tag;
         }
-        $data[ 'keywords' ] = $keywords;
+        $data[ 'tags' ] = $tags;
         $categories = get_post_meta($id, '_iip_taxonomy_terms', true) ?: array();
         $cat_ids = array();
         foreach ($categories as $cat) {
